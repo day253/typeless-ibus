@@ -1,19 +1,26 @@
 # Third-party notices
 
-## Design reference
+## OpenTypeless
 
-[OpenTypeless](https://github.com/tover0314-w/opentypeless) inspired the desktop
-dictation flow and platform fallback strategy. No source code from OpenTypeless
-is included here. OpenTypeless is available under the MIT License.
+[OpenTypeless](https://github.com/tover0314-w/opentypeless) was used as a design
+reference for the Tauri desktop architecture, audio capture boundary, global
+shortcut flow, tray behavior, and platform output fallback strategy.
 
-## ASR dependency
+OpenTypeless is available under the MIT License. This repository is a smaller,
+independent implementation and does not include its LLM, account, cloud quota,
+history, dictionary, or provider framework.
 
-This project installs
-[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr) from a
-pinned Git commit. It is an unofficial client based on analysis of the Doubao
-IME protocol. Its upstream repository did not contain a license file at the
-pinned revision (`267972f815f519fd7c6149f85a8b7cc99daf61a5`).
+## Doubao IME ASR protocol reference
 
-That dependency is not copied into this repository. Review its upstream terms
-and the applicable service terms before use or redistribution. Do not publish a
-bundled binary containing it until its redistribution terms are clear.
+The Rust interoperability client follows protocol information publicly shown by
+[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr), an
+unofficial client based on analysis of the Doubao IME Android application.
+
+The upstream repository did not contain a license file at the reviewed revision
+(`267972f815f519fd7c6149f85a8b7cc99daf61a5`). Its Python source and package are
+not copied, vendored, linked, or executed by this project. The Rust code in this
+repository independently implements the documented wire messages and service
+interaction needed for interoperability.
+
+The protocol and service may change at any time. Review the upstream project,
+applicable service terms, and local law before use or redistribution.

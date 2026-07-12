@@ -1,11 +1,8 @@
 .DS_Store
-.venv/
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.ruff_cache/
-build/
+node_modules/
 dist/
-*.spec
-credentials.json
+src-tauri/target/
+src-tauri/gen/
+*.log
+.idea/
+.vscode/
