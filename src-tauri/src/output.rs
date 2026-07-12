@@ -1,5 +1,7 @@
 use crate::config::AppConfig;
-use anyhow::{anyhow, Context, Result};
+#[cfg(not(target_os = "linux"))]
+use anyhow::anyhow;
+use anyhow::{Context, Result};
 use serde::Serialize;
 use std::time::Duration;
 
