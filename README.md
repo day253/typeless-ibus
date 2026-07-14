@@ -1,45 +1,52 @@
+English | [中文](README_zh.md)
+
 # Typeless IBus
 
-Typeless IBus 是一个面向 Ubuntu / Linux 的原生语音输入法。它把语音识别结果通过 IBus
-直接写入当前输入框，在 GNOME Wayland 下不依赖剪贴板、模拟粘贴或 X11。
+Typeless IBus is a native voice input method for Ubuntu and Linux. It writes speech recognition
+results directly into the focused text field through IBus, so it works on GNOME Wayland without
+clipboard injection, simulated paste, or X11.
 
-项目专注于一件事：按住一个键说话，松开后在正在使用的应用里得到文字。
+The product focuses on one workflow: hold a key, speak, release it, and get text in the app you are
+already using.
 
-## 产品特点
+## Highlights
 
-- **原生输入法体验**：识别中的内容显示为预编辑文本，最终结果由 IBus 提交。
-- **长按即说**：默认长按 `Fn` 录音、松开结束，也支持切换模式和其他触发键。
-- **适用于 Wayland**：通过 IBus D-Bus 接口输入，不模拟键盘和粘贴操作。
-- **原生设置界面**：使用 GTK4 配置触发键、麦克风和最长录音时间。
-- **轻量实现**：核心引擎与设置程序均使用 Rust，不依赖 Python，不引入 LLM。
-- **自动恢复**：ASR 身份被服务发现拒绝时，会重新获取凭据并重放当前语音。
+- **Native input method**: interim results appear as preedit text and final results are committed by IBus.
+- **Hold to talk**: hold `Fn` to record and release it to stop, with toggle mode and alternative keys available.
+- **Built for Wayland**: text input uses IBus D-Bus interfaces instead of keyboard or paste simulation.
+- **Native settings**: configure the trigger key, microphone, and recording limit in a GTK4 window.
+- **Small Rust codebase**: the engine and settings app are written in Rust, with no Python runtime or LLM.
+- **Automatic recovery**: rejected ASR service discovery credentials are refreshed while the current audio is replayed.
 
-## 使用体验
+## How it feels
 
-1. 在 Ubuntu“设置 → 键盘 → 输入源”中添加 `Typeless Voice`。
-2. 切换到 `Typeless Voice`，把光标放进任意输入框。
-3. 长按 `Fn` 开始说话。
-4. 松开 `Fn`，识别结果直接进入当前输入框。
+1. Add `Typeless Voice` from Ubuntu **Settings → Keyboard → Input Sources**.
+2. Switch to `Typeless Voice` and focus any text field.
+3. Hold `Fn` and speak.
+4. Release `Fn`; the recognized text is inserted into the focused app.
 
-按 `Esc` 可以取消当前录音或识别。
+Press `Esc` to cancel the active recording or recognition session.
 
-## 产品范围
+## Scope
 
-当前版本仅支持 Ubuntu / Linux、GNOME Wayland 和 IBus。它不包含 Windows 或 macOS
-客户端，也不提供 LLM 润色、账号、云额度、历史记录或词典系统。
+The current release targets Ubuntu/Linux, GNOME Wayland, and IBus only. It does not include Windows
+or macOS clients, LLM rewriting, accounts, cloud quotas, history, or dictionary features.
 
-语音识别协议参考
-[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr)，产品交互思路参考
-[`tover0314-w/opentypeless`](https://github.com/tover0314-w/opentypeless)。
+The speech protocol implementation references
+[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr), and the product interaction
+was inspired by [`tover0314-w/opentypeless`](https://github.com/tover0314-w/opentypeless).
 
-## 文档
+## Documentation
 
-- [安装与卸载](docs/installation.md)
-- [使用与配置](docs/usage.md)
-- [架构与设计](docs/architecture.md)
-- [开发与验证](docs/development.md)
-- [故障排查](docs/troubleshooting.md)
-- [数据、隐私与风险](docs/privacy.md)
-- [完整文档索引](docs/README.md)
+Detailed documentation is currently maintained in Chinese:
 
-本项目代码采用 [MIT License](LICENSE)。
+- [Installation and removal](docs/installation.md)
+- [Usage and configuration](docs/usage.md)
+- [Architecture and design](docs/architecture.md)
+- [Development and validation](docs/development.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Data, privacy, and risks](docs/privacy.md)
+- [Documentation index](docs/README.md)
+- [Changelog](CHANGELOG.md)
+
+This project is released under the [MIT License](LICENSE).
