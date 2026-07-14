@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2.9.1
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libgtk-4-dev libopus-dev pkg-config
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      - run: cargo test --locked
+      - run: cargo build --release --locked
+      - name: Upload ASR probe binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: typeless-ibus-engine-${{ github.sha }}
+          path: target/release/typeless-ibus-engine
+          if-no-files-found: error
+          retention-days: 1
+      - run: cargo install cargo-deb --version 3.7.0 --locked
+      - run: cargo deb --no-build
+
+  asr-availability:
+    name: ASR availability (non-blocking)
+    needs: linux
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download ASR probe binary
+        uses: actions/download-artifact@v4
+        with:
+          name: typeless-ibus-engine-${{ github.sha }}
+          path: target/release
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libopus-dev
+          chmod +x target/release/typeless-ibus-engine
+      - name: Test live ASR recognition
+        id: asr_probe
+        continue-on-error: true
+        env:
+          XDG_DATA_HOME: ${{ runner.temp }}/typeless-asr-data
+          RUST_LOG: typeless_ibus_engine=info
+        run: >-
+          timeout 90s target/release/typeless-ibus-engine
+          --check-asr-audio tests/fixtures/asr-availability.pcm
+      - name: Report ASR availability
+        if: always()
+        env:
+          PROBE_OUTCOME: ${{ steps.asr_probe.outcome }}
+        run: |
+          if [ "$PROBE_OUTCOME" = "success" ]; then
+            echo "### ✅ Doubao ASR is available" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=ASR availability probe failed::The external ASR service rejected or failed the live audio probe. Check the x_tt_logid in the preceding step."
+            echo "### ⚠️ Doubao ASR availability probe failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "This is non-blocking because GitHub runner networks may be rejected by the upstream service. See the preceding step for x_tt_logid and status details." >> "$GITHUB_STEP_SUMMARY"
+          fi

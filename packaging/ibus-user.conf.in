@@ -1,0 +1,4 @@
+[Service]
+Environment="IBUS_COMPONENT_PATH=@COMPONENT_DIR@:/usr/share/ibus/component"
+ExecStart=
+ExecStart=sh -c 'exec /usr/bin/ibus-daemon --cache=refresh --panel disable $([ "$XDG_SESSION_TYPE" = "x11" ] && echo "--xim")'
