@@ -3,7 +3,7 @@
 一个面向 Ubuntu / Linux 的原生 IBus 语音输入法。它直接通过 IBus 的预编辑与提交接口向
 当前输入框写入文字，因此可以在 GNOME Wayland 下工作，不依赖剪贴板、模拟粘贴或 X11。
 
-当前版本只包含 Rust 引擎，不使用 Python，也没有引入 LLM、文字润色、账号或云额度系统。
+当前版本只包含 Rust 引擎和 GTK4 原生设置程序，不使用 Python，也没有引入 LLM、文字润色、账号或云额度系统。
 语音识别协议参考
 [`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr)，桌面产品思路参考
 [`tover0314-w/opentypeless`](https://github.com/tover0314-w/opentypeless)。
@@ -22,18 +22,18 @@
 
 ## 安装
 
-系统要求：Ubuntu/Debian、IBus 1.5.29+、Rust stable、ALSA 和 Opus 开发库。
+系统要求：Ubuntu/Debian、IBus 1.5.29+、Rust stable、GTK4、ALSA 和 Opus 开发库。
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential pkg-config libasound2-dev libopus-dev ibus
+sudo apt install -y build-essential pkg-config libasound2-dev libgtk-4-dev libopus-dev ibus
 
 git clone https://github.com/day253/typeless.git
 cd typeless
 cargo build --release --locked
 cargo install cargo-deb --version 3.7.0 --locked
 cargo deb --no-build
-sudo apt install ./target/debian/typeless-ibus_0.3.0-1_amd64.deb
+sudo apt install ./target/debian/typeless-ibus_0.4.0-1_amd64.deb
 ```
 
 安装完成后注销并重新登录，或重启 IBus，再从 GNOME 设置添加输入源。
@@ -50,6 +50,18 @@ cargo build --release --locked
 `Typeless Voice`。卸载使用 `./packaging/uninstall-user.sh`。
 
 ## 配置
+
+在 Ubuntu“设置 → 键盘 → 输入源”中选择 `Typeless Voice`，点击设置按钮即可打开原生
+GTK4 设置窗口。也可以从应用列表打开“Typeless Voice 设置”。界面支持配置触发键、
+长按/切换模式、麦克风和最长录音时间；点击“保存并应用”会自动重新加载 IBus。
+
+用户级安装也可直接运行：
+
+```bash
+~/.local/libexec/typeless-ibus-settings
+```
+
+设置仍以可读的 JSON 格式保存在：
 
 首次运行会创建：
 
@@ -74,17 +86,17 @@ cargo build --release --locked
 - `inputDevice`：`null` 使用默认麦克风，也可填写设备名称。
 - `maxRecordingSeconds`：1 到 600 秒。
 
-修改配置后重启 IBus，配置会在新引擎进程中生效。可用以下命令检查：
+手动修改配置后需要重启 IBus。可用以下命令检查：
 
 ```bash
-typeless-ibus-engine --config-path
-typeless-ibus-engine --print-config
-typeless-ibus-engine --list-devices
-typeless-ibus-engine --check
+/usr/libexec/typeless-ibus-engine --config-path
+/usr/libexec/typeless-ibus-engine --print-config
+/usr/libexec/typeless-ibus-engine --list-devices
+/usr/libexec/typeless-ibus-engine --check
 ```
 
-系统包中的可执行文件位于 `/usr/libexec/typeless-ibus-engine`；用户安装版本位于
-`~/.local/libexec/typeless-ibus-engine`。
+系统包中的程序位于 `/usr/libexec/typeless-ibus-*`；用户安装版本位于
+`~/.local/libexec/typeless-ibus-*`。
 
 ## 架构
 
@@ -108,6 +120,7 @@ src/engine.rs     长按/切换触发、录音会话和 IBus 文本提交
 src/audio.rs      麦克风采集、单声道混音与重采样
 src/asr.rs        设备注册、Token、Protobuf、WebSocket 与 Opus
 src/config.rs     JSON 配置、按键解析与本地路径
+src/settings.rs   GTK4 原生设置窗口和 IBus 配置重载
 ```
 
 ## 开发与验证
