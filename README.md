@@ -2,9 +2,9 @@ English | [中文](README_zh.md)
 
 # typeless-ibus
 
-typeless-ibus is a native voice input method for Ubuntu and Linux. It writes speech recognition
-results directly into the focused text field through IBus, so it works on GNOME Wayland without
-clipboard injection, simulated paste, or X11.
+typeless-ibus is a native IBus voice input method for Linux. It writes speech recognition results
+directly into the focused text field, including on GNOME Wayland, without clipboard injection,
+simulated paste, or X11.
 
 The product focuses on one workflow: hold a key, speak, release it, and get text in the app you are
 already using.
@@ -16,12 +16,15 @@ already using.
 - **Built for Wayland**: text input uses IBus D-Bus interfaces instead of keyboard or paste simulation.
 - **System-native controls**: change the trigger key and recording mode from the IBus input-source menu, with English and Chinese labels selected from the system locale.
 - **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit, Python runtime, or LLM.
-- **Broad Linux support**: native `.deb` builds cover Ubuntu 20.04–26.04 and Debian 11–13; Fedora, openSUSE, and Arch Linux are protocol-tested, with Nix packages for x86_64 and aarch64.
+- **Broad Linux support**: native `.deb` builds cover Ubuntu 20.04–26.04 and Debian 11–13;
+  Fedora 43/44, openSUSE Tumbleweed, and Arch Linux are protocol-tested; Nix packages cover
+  x86_64-linux and aarch64-linux.
 - **Automatic recovery**: rejected ASR service discovery credentials are refreshed while the current audio is replayed.
 
 ## How it feels
 
-1. Add `typeless-ibus` from Ubuntu **Settings → Keyboard → Input Sources**.
+1. Add `typeless-ibus` from your desktop's input-source settings. On GNOME, open
+   **Settings → Keyboard → Input Sources**.
 2. Switch to `typeless-ibus` and focus any text field.
 3. Hold `Fn` and speak.
 4. Release `Fn`; the recognized text is inserted into the focused app.
@@ -30,20 +33,21 @@ Press `Esc` to cancel the active recording or recognition session.
 
 ## Scope
 
-The current release targets Linux distributions with IBus 1.5.22 or newer. IBus remains the only input-method
-backend; the project does not ship separate GTK, Qt, XIM, Wayland, or Fcitx5 frontends. It also does
+The current release targets Linux distributions with IBus 1.5.22 or newer. IBus remains the only
+input-method backend; integrations supplied by each distribution connect it to GTK, Qt, XIM, and
+Wayland applications. The project does not ship separate frontends or Fcitx5 support. It also does
 not include Windows or macOS clients, LLM rewriting, accounts, cloud quotas, history, or dictionary
 features.
 
 The speech protocol implementation references
-[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr), and the product interaction
-was inspired by [`tover0314-w/opentypeless`](https://github.com/tover0314-w/opentypeless).
+[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr).
 
 ## Documentation
 
 Detailed documentation is currently maintained in Chinese:
 
 - [Installation and removal](docs/installation.md)
+- [Distribution support](docs/distributions.md)
 - [Usage and configuration](docs/usage.md)
 - [Architecture and design](docs/architecture.md)
 - [Development and validation](docs/development.md)

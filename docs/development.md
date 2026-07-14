@@ -11,7 +11,7 @@ cargo build --release --locked
 
 产品运行时代码和 IBus 配置菜单均使用 Rust，不依赖 GUI 工具包或 Python。
 
-## Debian 打包
+## `.deb` 打包
 
 ```bash
 cargo install cargo-deb --version 3.7.0 --locked
@@ -37,7 +37,7 @@ x86_64 和 aarch64 GitHub runner 上分别原生构建。
 
 ## GitHub Actions
 
-CI 的基础 Rust 检查在 Ubuntu 24.04 上执行，另有发行版兼容矩阵：
+CI 的基础 Rust 检查在 Ubuntu 24.04 runner 上执行，发行版兼容性由独立矩阵覆盖：
 
 - Rust 格式检查
 - Clippy（警告视为错误）

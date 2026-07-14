@@ -7,16 +7,15 @@
 - Rust stable
 - ALSA 和 Opus 开发库
 
-CI 会分别在 Ubuntu 20.04、22.04、24.04、26.04 和 Debian 11、12、13 的官方用户空间中构建 `.deb`，
-并实际调用当前发行版的 IBus Factory、`CreateEngine` 和 `ProcessKeyEvent` 接口。
-请选择与目标发行版和版本一致的 `.deb`，避免 glibc 和 ALSA ABI 不匹配。所有版本
+完整的已验证版本、安装方式和兼容边界见[发行版支持范围](distributions.md)。简要来说：
+Ubuntu 20.04–26.04 与 Debian 11–13 提供在对应官方用户空间内构建的原生 `.deb`；Fedora
+43/44、openSUSE Tumbleweed 和 Arch Linux 通过相同的 IBus 协议测试，可使用 Nix Flake
+或从源码安装。
+
+请选择与目标发行版和版本一致的 `.deb`，避免 glibc 和 ALSA ABI 不匹配。所有安装方式
 都只包含 Rust IBus 引擎，不再区分 GTK 设置版和无界面版。
 
-Fedora 43/44、openSUSE Tumbleweed 和 Arch Linux 也执行相同的 IBus 协议测试。它们目前
-不提供项目维护的 RPM 或 PKGBUILD，推荐使用下方的 Nix Flake 或从源码进行用户级安装。
-Linux Mint、Pop!_OS 等 Ubuntu 衍生版应选择与其 Ubuntu 基础版本一致的 `.deb`。
-
-## 构建 Debian 包
+## 构建 `.deb` 包
 
 ```bash
 sudo apt update
@@ -30,8 +29,8 @@ cargo deb --no-build
 sudo apt install ./target/debian/typeless-ibus_*.deb
 ```
 
-安装完成后注销并重新登录，或重新启动 IBus。随后在 Ubuntu“设置 → 键盘 → 输入源”
-中添加 `typeless-ibus`。
+安装完成后注销并重新登录，或重新启动 IBus。随后在桌面环境的输入源设置中添加
+`typeless-ibus`；GNOME 用户可打开“设置 → 键盘 → 输入源”。
 
 ## 其他发行版从源码安装
 

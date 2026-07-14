@@ -1,14 +1,5 @@
 # Third-party notices
 
-## OpenTypeless
-
-[OpenTypeless](https://github.com/tover0314-w/opentypeless) was used as a product
-and interaction reference for voice input. typeless-ibus is an independent,
-Linux-only implementation and does not include OpenTypeless's LLM, account,
-cloud quota, history, dictionary, provider framework, Tauri UI, or source code.
-
-OpenTypeless is available under the MIT License.
-
 ## Doubao IME ASR protocol reference
 
 The Rust interoperability client follows protocol information publicly shown by

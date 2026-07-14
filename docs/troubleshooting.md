@@ -30,7 +30,8 @@
 ./packaging/install-user.sh
 ```
 
-然后在 Ubuntu“设置 → 键盘 → 输入源”中添加 `typeless-ibus`。
+然后在桌面环境的输入源设置中添加 `typeless-ibus`；GNOME 用户可打开
+“设置 → 键盘 → 输入源”。
 
 ## ASR 握手诊断
 
