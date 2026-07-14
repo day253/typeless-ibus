@@ -22,5 +22,12 @@ jobs:
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo test --locked
       - run: cargo build --release --locked
+      - name: Test live ASR recognition
+        env:
+          XDG_DATA_HOME: ${{ runner.temp }}/typeless-asr-data
+          RUST_LOG: typeless_ibus_engine=info
+        run: >-
+          timeout 90s target/release/typeless-ibus-engine
+          --check-asr-audio tests/fixtures/asr-availability.pcm
       - run: cargo install cargo-deb --version 3.7.0 --locked
       - run: cargo deb --no-build

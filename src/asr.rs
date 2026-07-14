@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, anyhow, bail};
 use futures_util::{SinkExt, StreamExt};
+use http::HeaderMap;
 use http::header::{HeaderValue, USER_AGENT as USER_AGENT_HEADER};
 use opus::{Application, Channels, Encoder};
 use prost::Message as ProstMessage;
@@ -22,6 +23,7 @@ const AID: u32 = 401_734;
 const USER_AGENT: &str = "com.bytedance.android.doubaoime/100102018 (Linux; U; Android 16; en_US; Pixel 7 Pro; Build/BP2A.250605.031.A2; Cronet/TTNetVersion:94cf429a 2025-11-17 QuicVersion:1f89f732 2025-05-08)";
 const SAMPLE_RATE: u32 = 16_000;
 const FRAME_DURATION_MS: u64 = 20;
+const PCM_FRAME_BYTES: usize = 640;
 
 #[derive(Debug, Clone)]
 pub enum AsrEvent {
@@ -92,6 +94,7 @@ enum HandshakeOutcome {
     Ready,
     Rejected {
         stage: &'static str,
+        log_id: Option<String>,
         message_type: String,
         status_code: i32,
         service_name: String,
@@ -228,84 +231,140 @@ where
         .headers_mut()
         .insert("x-custom-keepalive", HeaderValue::from_static("true"));
 
-    let (mut socket, _) = connect_async(request).await.context("连接豆包 ASR 失败")?;
-    let request_id = Uuid::new_v4().to_string();
+    let (mut socket, response) = connect_async(request).await.context("连接豆包 ASR 失败")?;
+    let log_id = extract_log_id(response.headers());
+    tracing::info!(
+        x_tt_logid = log_id.as_deref().unwrap_or("missing"),
+        "connected to Doubao ASR"
+    );
 
-    send_request(
-        &mut socket,
-        request_message(&request_id, &credentials.token, "StartTask"),
-    )
-    .await?;
-    expect_message(&mut socket, "TaskStarted").await?;
+    let result = async {
+        let request_id = Uuid::new_v4().to_string();
 
-    let session_payload = session_payload(&credentials.device_id);
-    let mut start_session = request_message(&request_id, &credentials.token, "StartSession");
-    start_session.payload = session_payload;
-    send_request(&mut socket, start_session).await?;
-    expect_message(&mut socket, "SessionStarted").await?;
+        send_request(
+            &mut socket,
+            request_message(&request_id, &credentials.token, "StartTask"),
+        )
+        .await?;
+        expect_message(&mut socket, "TaskStarted").await?;
 
-    let mut encoder = Encoder::new(SAMPLE_RATE, Channels::Mono, Application::Audio)
-        .context("初始化 Opus 编码器失败")?;
-    let started_at = unix_time_ms();
-    let mut frame_index = 0_u64;
-    let mut final_text = String::new();
-    let mut finishing = false;
+        let session_payload = session_payload(&credentials.device_id);
+        let mut start_session = request_message(&request_id, &credentials.token, "StartSession");
+        start_session.payload = session_payload;
+        send_request(&mut socket, start_session).await?;
+        expect_message(&mut socket, "SessionStarted").await?;
 
-    loop {
-        tokio::select! {
-            audio = audio_rx.recv(), if !finishing => {
-                match audio {
-                    Some(pcm) => {
-                        let frame_state = if frame_index == 0 { FrameState::First } else { FrameState::Middle };
-                        let encoded = encode_pcm(&mut encoder, &pcm)?;
-                        let message = audio_message(
-                            &request_id,
-                            encoded,
-                            frame_state,
-                            started_at + frame_index * FRAME_DURATION_MS,
-                        );
-                        send_request(&mut socket, message).await?;
-                        frame_index += 1;
-                    }
-                    None => {
-                        if frame_index > 0 {
-                            let silence = vec![0_u8; 640];
-                            let encoded = encode_pcm(&mut encoder, &silence)?;
+        let mut encoder = Encoder::new(SAMPLE_RATE, Channels::Mono, Application::Audio)
+            .context("初始化 Opus 编码器失败")?;
+        let started_at = unix_time_ms();
+        let mut frame_index = 0_u64;
+        let mut final_text = String::new();
+        let mut finishing = false;
+
+        loop {
+            tokio::select! {
+                audio = audio_rx.recv(), if !finishing => {
+                    match audio {
+                        Some(pcm) => {
+                            let frame_state = if frame_index == 0 { FrameState::First } else { FrameState::Middle };
+                            let encoded = encode_pcm(&mut encoder, &pcm)?;
                             let message = audio_message(
                                 &request_id,
                                 encoded,
-                                FrameState::Last,
+                                frame_state,
                                 started_at + frame_index * FRAME_DURATION_MS,
                             );
                             send_request(&mut socket, message).await?;
+                            frame_index += 1;
                         }
-                        send_request(
-                            &mut socket,
-                            request_message(&request_id, &credentials.token, "FinishSession"),
-                        ).await?;
-                        finishing = true;
+                        None => {
+                            if frame_index > 0 {
+                                let silence = vec![0_u8; 640];
+                                let encoded = encode_pcm(&mut encoder, &silence)?;
+                                let message = audio_message(
+                                    &request_id,
+                                    encoded,
+                                    FrameState::Last,
+                                    started_at + frame_index * FRAME_DURATION_MS,
+                                );
+                                send_request(&mut socket, message).await?;
+                            }
+                            send_request(
+                                &mut socket,
+                                request_message(&request_id, &credentials.token, "FinishSession"),
+                            ).await?;
+                            finishing = true;
+                        }
                     }
                 }
-            }
-            incoming = socket.next() => {
-                let response = decode_socket_message(incoming).await?;
-                if matches!(response.message_type.as_str(), "TaskFailed" | "SessionFailed") {
-                    bail!("豆包 ASR 返回错误：{}", response.status_message);
-                }
-                if response.message_type == "SessionFinished" {
-                    break;
-                }
-                if let Some(event) = parse_transcript(&response)? {
-                    if let AsrEvent::Final(text) = &event {
-                        final_text.clone_from(text);
+                incoming = socket.next() => {
+                    let response = decode_socket_message(incoming).await?;
+                    if matches!(response.message_type.as_str(), "TaskFailed" | "SessionFailed") {
+                        bail!(
+                            "豆包 ASR 返回错误：type={} code={} service={} message={}",
+                            response.message_type,
+                            response.status_code,
+                            response.service_name,
+                            response.status_message
+                        );
                     }
-                    on_event(event);
+                    if response.message_type == "SessionFinished" {
+                        break;
+                    }
+                    if let Some(event) = parse_transcript(&response)? {
+                        if let AsrEvent::Final(text) = &event {
+                            final_text.clone_from(text);
+                        }
+                        on_event(event);
+                    }
                 }
             }
         }
+
+        Ok(final_text)
+    }
+    .await;
+
+    if let Err(error) = &result {
+        tracing::error!(
+            x_tt_logid = log_id.as_deref().unwrap_or("missing"),
+            error = %format_args!("{error:#}"),
+            "Doubao ASR request failed"
+        );
+    }
+    result
+}
+
+pub async fn check_audio_fixture(audio_path: &Path, credentials_path: &Path) -> Result<String> {
+    let pcm = tokio::fs::read(audio_path)
+        .await
+        .with_context(|| format!("读取 ASR 测试音频失败：{}", audio_path.display()))?;
+    if pcm.len() < PCM_FRAME_BYTES || pcm.len() % 2 != 0 {
+        bail!("ASR 测试音频必须是非空的 16 kHz 单声道 16-bit little-endian PCM");
     }
 
-    Ok(final_text)
+    let (audio_tx, audio_rx) = mpsc::channel(8);
+    let feeder = tokio::spawn(async move {
+        for chunk in pcm.chunks(PCM_FRAME_BYTES) {
+            let mut frame = chunk.to_vec();
+            frame.resize(PCM_FRAME_BYTES, 0);
+            if audio_tx.send(frame).await.is_err() {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(FRAME_DURATION_MS)).await;
+        }
+    });
+
+    let recognition = transcribe_realtime(audio_rx, credentials_path, |_| {});
+    let result = timeout(Duration::from_secs(60), recognition)
+        .await
+        .context("ASR 测试音频识别超时")?;
+    let _ = feeder.await;
+    let text = result?;
+    if text.trim().is_empty() {
+        bail!("ASR 接口完成请求但没有返回识别文字");
+    }
+    Ok(text)
 }
 
 fn session_payload(device_id: &str) -> String {
@@ -329,6 +388,14 @@ fn session_payload(device_id: &str) -> String {
     .to_string()
 }
 
+fn extract_log_id(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get("x-tt-logid")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| !value.trim().is_empty())
+        .map(str::to_owned)
+}
+
 async fn probe_handshake(credentials: &DeviceCredentials) -> Result<HandshakeOutcome> {
     let url = format!(
         "{WEBSOCKET_URL}?aid={AID}&device_id={}",
@@ -347,47 +414,79 @@ async fn probe_handshake(credentials: &DeviceCredentials) -> Result<HandshakeOut
         .headers_mut()
         .insert("x-custom-keepalive", HeaderValue::from_static("true"));
 
-    let (mut socket, _) = timeout(Duration::from_secs(15), connect_async(request))
+    let (mut socket, response) = timeout(Duration::from_secs(15), connect_async(request))
         .await
         .context("连接豆包 ASR 诊断超时")?
         .context("连接豆包 ASR 诊断失败")?;
-    let request_id = Uuid::new_v4().to_string();
-    send_request(
-        &mut socket,
-        request_message(&request_id, &credentials.token, "StartTask"),
-    )
-    .await?;
-    let task_response = receive_probe_response(&mut socket).await?;
-    if task_response.message_type != "TaskStarted" {
-        let _ = socket.send(WsMessage::Close(None)).await;
-        return Ok(rejected_outcome("StartTask", task_response));
-    }
+    let log_id = extract_log_id(response.headers());
+    tracing::info!(
+        x_tt_logid = log_id.as_deref().unwrap_or("missing"),
+        "connected to Doubao ASR diagnostic"
+    );
 
-    let mut start_session = request_message(&request_id, &credentials.token, "StartSession");
-    start_session.payload = session_payload(&credentials.device_id);
-    send_request(&mut socket, start_session).await?;
-    let session_response = receive_probe_response(&mut socket).await?;
-    let outcome = if session_response.message_type == "SessionStarted" {
-        let _ = send_request(
+    let result = async {
+        let request_id = Uuid::new_v4().to_string();
+        send_request(
             &mut socket,
-            request_message(&request_id, &credentials.token, "FinishSession"),
+            request_message(&request_id, &credentials.token, "StartTask"),
         )
-        .await;
-        let _ = timeout(Duration::from_secs(5), async {
-            loop {
-                let response = receive_probe_response(&mut socket).await?;
-                if response.message_type == "SessionFinished" {
-                    return Ok::<(), anyhow::Error>(());
+        .await?;
+        let task_response = receive_probe_response(&mut socket).await?;
+        if task_response.message_type != "TaskStarted" {
+            let _ = socket.send(WsMessage::Close(None)).await;
+            return Ok(rejected_outcome("StartTask", task_response, log_id.clone()));
+        }
+
+        let mut start_session = request_message(&request_id, &credentials.token, "StartSession");
+        start_session.payload = session_payload(&credentials.device_id);
+        send_request(&mut socket, start_session).await?;
+        let session_response = receive_probe_response(&mut socket).await?;
+        let outcome = if session_response.message_type == "SessionStarted" {
+            let _ = send_request(
+                &mut socket,
+                request_message(&request_id, &credentials.token, "FinishSession"),
+            )
+            .await;
+            let _ = timeout(Duration::from_secs(5), async {
+                loop {
+                    let response = receive_probe_response(&mut socket).await?;
+                    if response.message_type == "SessionFinished" {
+                        return Ok::<(), anyhow::Error>(());
+                    }
                 }
-            }
-        })
-        .await;
-        HandshakeOutcome::Ready
-    } else {
-        rejected_outcome("StartSession", session_response)
-    };
-    let _ = socket.send(WsMessage::Close(None)).await;
-    Ok(outcome)
+            })
+            .await;
+            HandshakeOutcome::Ready
+        } else {
+            rejected_outcome("StartSession", session_response, log_id.clone())
+        };
+        let _ = socket.send(WsMessage::Close(None)).await;
+        Ok(outcome)
+    }
+    .await;
+
+    match &result {
+        Ok(HandshakeOutcome::Rejected {
+            stage,
+            log_id,
+            status_code,
+            status_message,
+            ..
+        }) => tracing::warn!(
+            x_tt_logid = log_id.as_deref().unwrap_or("missing"),
+            stage,
+            status_code,
+            status_message,
+            "Doubao ASR diagnostic rejected"
+        ),
+        Err(error) => tracing::error!(
+            x_tt_logid = log_id.as_deref().unwrap_or("missing"),
+            error = %format_args!("{error:#}"),
+            "Doubao ASR diagnostic failed"
+        ),
+        Ok(HandshakeOutcome::Ready) => {}
+    }
+    result
 }
 
 async fn receive_probe_response<S>(socket: &mut S) -> Result<AsrResponse>
@@ -417,9 +516,14 @@ where
     .context("等待豆包 ASR 诊断响应超时")?
 }
 
-fn rejected_outcome(stage: &'static str, response: AsrResponse) -> HandshakeOutcome {
+fn rejected_outcome(
+    stage: &'static str,
+    response: AsrResponse,
+    log_id: Option<String>,
+) -> HandshakeOutcome {
     HandshakeOutcome::Rejected {
         stage,
+        log_id,
         message_type: response.message_type,
         status_code: response.status_code,
         service_name: response.service_name,
@@ -432,12 +536,14 @@ fn print_handshake(label: &str, outcome: &HandshakeOutcome) {
         HandshakeOutcome::Ready => println!("asr.{label}: ready (StartTask + StartSession)"),
         HandshakeOutcome::Rejected {
             stage,
+            log_id,
             message_type,
             status_code,
             service_name,
             status_message,
         } => println!(
-            "asr.{label}: rejected stage={stage} type={message_type} code={status_code} service={service_name:?} message={status_message:?}"
+            "asr.{label}: rejected stage={stage} logid={} type={message_type} code={status_code} service={service_name:?} message={status_message:?}",
+            log_id.as_deref().unwrap_or("missing")
         ),
     }
 }
@@ -466,7 +572,13 @@ where
         response.message_type.as_str(),
         "TaskFailed" | "SessionFailed"
     ) {
-        bail!("豆包 ASR 初始化失败：{}", response.status_message);
+        bail!(
+            "豆包 ASR 初始化失败：type={} code={} service={} message={}",
+            response.message_type,
+            response.status_code,
+            response.service_name,
+            response.status_message
+        );
     }
     if response.message_type != expected {
         bail!("豆包 ASR 返回了意外消息：{}", response.message_type);
@@ -808,6 +920,7 @@ mod tests {
                 status_message: "service discovery failure".to_string(),
                 ..Default::default()
             },
+            Some("test-logid".to_string()),
         );
 
         assert!(!outcome.is_ready());
@@ -815,6 +928,14 @@ mod tests {
         let debug = format!("{outcome:?}");
         assert!(!debug.contains("token"));
         assert!(!debug.contains("device_id"));
+        assert!(debug.contains("test-logid"));
+    }
+
+    #[test]
+    fn extracts_case_insensitive_log_id_header() {
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Tt-Logid", HeaderValue::from_static("trace-123"));
+        assert_eq!(extract_log_id(&headers).as_deref(), Some("trace-123"));
     }
 
     #[test]
