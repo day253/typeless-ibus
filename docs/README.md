@@ -1,4 +1,4 @@
-# Typeless IBus 文档
+# typeless-ibus 文档
 
 这里保存产品主页之外的安装、配置、实现和维护文档。
 

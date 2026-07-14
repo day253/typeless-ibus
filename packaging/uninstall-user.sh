@@ -16,4 +16,4 @@ if systemctl --user is-active --quiet org.freedesktop.IBus.session.GNOME.service
   systemctl --user restart org.freedesktop.IBus.session.GNOME.service
 fi
 
-echo "Typeless IBus 用户级安装已移除。"
+echo "typeless-ibus 用户级安装已移除。"

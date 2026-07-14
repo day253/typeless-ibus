@@ -13,8 +13,8 @@
 sudo apt update
 sudo apt install -y build-essential pkg-config libasound2-dev libopus-dev ibus
 
-git clone https://github.com/day253/typeless.git
-cd typeless
+git clone https://github.com/day253/typeless-ibus.git
+cd typeless-ibus
 cargo build --release --locked
 cargo install cargo-deb --version 3.7.0 --locked
 cargo deb --no-build
@@ -22,7 +22,7 @@ sudo apt install ./target/debian/typeless-ibus_*.deb
 ```
 
 安装完成后注销并重新登录，或重新启动 IBus。随后在 Ubuntu“设置 → 键盘 → 输入源”
-中添加 `Typeless Voice`。
+中添加 `typeless-ibus`。
 
 ## 用户级安装
 

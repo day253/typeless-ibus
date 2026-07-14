@@ -30,7 +30,7 @@
 ./packaging/install-user.sh
 ```
 
-然后在 Ubuntu“设置 → 键盘 → 输入源”中添加 `Typeless Voice`。
+然后在 Ubuntu“设置 → 键盘 → 输入源”中添加 `typeless-ibus`。
 
 ## ASR 握手诊断
 

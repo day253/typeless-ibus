@@ -1,6 +1,6 @@
 # 架构与设计
 
-Typeless IBus 是 Linux 原生 IBus 组件。按键事件、预编辑文本和最终提交全部通过 IBus
+typeless-ibus 是 Linux 原生 IBus 组件。按键事件、预编辑文本和最终提交全部通过 IBus
 接口完成，不依赖剪贴板、模拟粘贴或 X11。
 
 ## 数据流

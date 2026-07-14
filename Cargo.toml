@@ -5,7 +5,7 @@ description = "Native IBus voice input engine for Linux"
 authors = ["day253 <9634619+day253@users.noreply.github.com>"]
 license = "MIT"
 edition = "2024"
-repository = "https://github.com/day253/typeless"
+repository = "https://github.com/day253/typeless-ibus"
 readme = "README.md"
 
 [[bin]]

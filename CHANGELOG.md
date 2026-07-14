@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Initial native IBus voice input release for Ubuntu/Linux and GNOME Wayland.
+- Project, Debian package, command, and input-source display names unified as `typeless-ibus`.
 - Hold-to-talk and toggle recording modes with configurable `Fn`, Control, function-key, Space,
   and XKB keysym triggers.
 - ALSA/cpal microphone capture, 16 kHz mono PCM processing, Opus encoding, and Doubao IME ASR.

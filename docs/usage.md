@@ -2,8 +2,8 @@
 
 ## 基本使用
 
-1. 在 Ubuntu“设置 → 键盘 → 输入源”中添加 `Typeless Voice`。
-2. 切换到 `Typeless Voice`，将光标放入任意可输入文本的位置。
+1. 在 Ubuntu“设置 → 键盘 → 输入源”中添加 `typeless-ibus`。
+2. 切换到 `typeless-ibus`，将光标放入任意可输入文本的位置。
 3. 长按触发键开始录音，松开后结束录音。
 4. 识别中的文字显示为预编辑文本，最终文字由 IBus 提交。
 
@@ -14,7 +14,7 @@
 
 ## IBus 配置菜单
 
-切换到 `Typeless Voice` 后，打开 Ubuntu 顶栏的输入法菜单，可以直接修改：
+切换到 `typeless-ibus` 后，打开 Ubuntu 顶栏的输入法菜单，可以直接修改：
 
 - 触发方式：长按或按键切换。
 - 触发键：`Fn`、左右 Ctrl、F8、F9、F10 或空格。

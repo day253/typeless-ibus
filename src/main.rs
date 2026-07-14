@@ -102,7 +102,7 @@ async fn run() -> Result<()> {
         config = %config_path.display(),
         trigger = %effective.trigger_key,
         mode = ?effective.trigger_mode,
-        "starting Typeless IBus engine"
+        "starting typeless-ibus engine"
     );
     let _connection = ibus::serve(config, credentials_path).await?;
     tokio::signal::ctrl_c().await?;
@@ -212,7 +212,7 @@ fn print_audio_devices() -> Result<()> {
 
 fn print_help() {
     println!(
-        "Typeless IBus voice input engine {VERSION}\n\
+        "typeless-ibus voice input engine {VERSION}\n\
          \n\
          Usage: typeless-ibus-engine [OPTION] [PATH]\n\
          \n\

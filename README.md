@@ -1,8 +1,8 @@
 English | [中文](README_zh.md)
 
-# Typeless IBus
+# typeless-ibus
 
-Typeless IBus is a native voice input method for Ubuntu and Linux. It writes speech recognition
+typeless-ibus is a native voice input method for Ubuntu and Linux. It writes speech recognition
 results directly into the focused text field through IBus, so it works on GNOME Wayland without
 clipboard injection, simulated paste, or X11.
 
@@ -20,8 +20,8 @@ already using.
 
 ## How it feels
 
-1. Add `Typeless Voice` from Ubuntu **Settings → Keyboard → Input Sources**.
-2. Switch to `Typeless Voice` and focus any text field.
+1. Add `typeless-ibus` from Ubuntu **Settings → Keyboard → Input Sources**.
+2. Switch to `typeless-ibus` and focus any text field.
 3. Hold `Fn` and speak.
 4. Release `Fn`; the recognized text is inserted into the focused app.
 

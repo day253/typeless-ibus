@@ -32,5 +32,5 @@ if systemctl --user is-active --quiet org.freedesktop.IBus.session.GNOME.service
   systemctl --user restart org.freedesktop.IBus.session.GNOME.service
 fi
 
-echo "Typeless IBus 已安装到当前用户。"
-echo "请在 GNOME 设置的输入源中添加 Typeless Voice。"
+echo "typeless-ibus 已安装到当前用户。"
+echo "请在 GNOME 设置的输入源中添加 typeless-ibus。"
