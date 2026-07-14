@@ -108,6 +108,8 @@ jobs:
     name: ${{ matrix.name }} / IBus protocol
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
+    env:
+      PATH: /github/home/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     strategy:
       fail-fast: false
       matrix:
