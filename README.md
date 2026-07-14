@@ -94,6 +94,7 @@ GTK4 设置窗口。也可以从应用列表打开“Typeless Voice 设置”。
 /usr/libexec/typeless-ibus-engine --list-devices
 /usr/libexec/typeless-ibus-engine --check
 /usr/libexec/typeless-ibus-engine --check-asr
+/usr/libexec/typeless-ibus-engine --check-asr-audio tests/fixtures/asr-availability.pcm
 ```
 
 系统包中的程序位于 `/usr/libexec/typeless-ibus-*`；用户安装版本位于
@@ -102,6 +103,11 @@ GTK4 设置窗口。也可以从应用列表打开“Typeless Voice 设置”。
 `--check-asr` 不读取麦克风，也不依赖 IBus 或 GTK。它会独立检查 settings Token 接口和
 WebSocket 的 `StartTask`、`StartSession` 握手，并隐藏所有凭据。首次握手失败时会使用
 同一设备身份重试；仍失败才临时注册一个仅用于诊断的新身份，不覆盖本地凭据。
+
+`--check-asr-audio` 会实时发送指定的 16 kHz、单声道、16-bit little-endian PCM 文件，
+并要求服务返回非空识别文字。WebSocket 建联后会记录响应头中的 `x-tt-logid`；如果握手、
+传输或识别失败，同一个 Log ID 会随错误写入日志，便于上游排查。CI 使用 macOS `say`
+生成并提交在 `tests/fixtures/asr-availability.pcm` 的固定普通话样本执行这项真实接口测试。
 
 ## 架构
 

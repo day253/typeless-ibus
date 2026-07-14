@@ -2,7 +2,8 @@ mod asr;
 mod engine;
 mod ibus;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
+use std::path::Path;
 use typeless_ibus::config::Config;
 use typeless_ibus::{audio, config};
 
@@ -13,7 +14,7 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "typeless_ibus=info".into()),
+                .unwrap_or_else(|_| "typeless_ibus=info,typeless_ibus_engine=info".into()),
         )
         .init();
 
@@ -24,7 +25,8 @@ async fn main() {
 }
 
 async fn run() -> Result<()> {
-    let argument = std::env::args().nth(1);
+    let mut arguments = std::env::args().skip(1);
+    let argument = arguments.next();
     match argument.as_deref() {
         Some("--help" | "-h") => {
             print_help();
@@ -72,6 +74,18 @@ async fn run() -> Result<()> {
             asr::diagnose_service(&credentials_path).await?;
             return Ok(());
         }
+        Some("--check-asr-audio") => {
+            let audio_path = arguments
+                .next()
+                .context("--check-asr-audio 需要一个 PCM 音频文件路径")?;
+            if let Some(extra) = arguments.next() {
+                bail!("--check-asr-audio 收到了多余参数：{extra}");
+            }
+            let credentials_path = config::credentials_path()?;
+            let text = asr::check_audio_fixture(Path::new(&audio_path), &credentials_path).await?;
+            println!("asr.audio: recognized {text:?}");
+            return Ok(());
+        }
         Some("--ibus") | None => {}
         Some(argument) => bail!("未知参数：{argument}；使用 --help 查看帮助"),
     }
@@ -111,12 +125,13 @@ fn print_help() {
     println!(
         "Typeless IBus voice input engine {VERSION}\n\
          \n\
-         Usage: typeless-ibus-engine [OPTION]\n\
+         Usage: typeless-ibus-engine [OPTION] [PATH]\n\
          \n\
          Options:\n\
            --ibus                  Run as an IBus engine (default)\n\
            --check                 Check configuration, IBus and microphones\n\
            --check-asr             Diagnose ASR APIs without IBus or audio\n\
+           --check-asr-audio PATH  Recognize a 16 kHz mono s16le PCM fixture\n\
            --list-devices          List microphone devices\n\
            --config-path           Print configuration path\n\
            --print-config          Print the effective configuration\n\

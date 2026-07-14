@@ -19,7 +19,7 @@
       <icon>/usr/share/icons/hicolor/128x128/apps/typeless.png</icon>
       <setup>/usr/libexec/typeless-ibus-settings</setup>
       <layout>us</layout>
-      <symbol>🎙</symbol>
+      <symbol>∿</symbol>
       <rank>80</rank>
     </engine>
   </engines>
