@@ -17,8 +17,8 @@ already using.
 - **System-native controls**: change the trigger key and recording mode from the IBus input-source menu, with English and Chinese labels selected from the system locale.
 - **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit, Python runtime, or LLM.
 - **Broad Linux support**: native `.deb` builds cover Ubuntu 20.04–26.04 and Debian 11–13;
-  Fedora 43/44, openSUSE Tumbleweed, and Arch Linux are protocol-tested; Nix packages cover
-  x86_64-linux and aarch64-linux.
+  native `.rpm` builds cover Fedora 43/44 and openSUSE Tumbleweed; Arch Linux is protocol-tested;
+  Nix packages cover x86_64-linux and aarch64-linux.
 - **Automatic recovery**: rejected ASR service discovery credentials are refreshed while the current audio is replayed.
 
 ## How it feels

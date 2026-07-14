@@ -4,16 +4,16 @@
 
 - 支持 IBus 的 Linux 发行版
 - IBus 1.5.22+
-- Rust stable
-- ALSA 和 Opus 开发库
+- 可用的 ALSA 输入设备
 
 完整的已验证版本、安装方式和兼容边界见[发行版支持范围](distributions.md)。简要来说：
-Ubuntu 20.04–26.04 与 Debian 11–13 提供在对应官方用户空间内构建的原生 `.deb`；Fedora
-43/44、openSUSE Tumbleweed 和 Arch Linux 通过相同的 IBus 协议测试，可使用 Nix Flake
-或从源码安装。
+Ubuntu 20.04–26.04 与 Debian 11–13 提供在对应官方用户空间内构建的原生 `.deb`；
+Fedora 43/44 与 openSUSE Tumbleweed 提供原生 `.rpm`；Arch Linux 通过相同的 IBus
+协议测试，可使用 Nix Flake 或从源码安装。
 
-请选择与目标发行版和版本一致的 `.deb`，避免 glibc 和 ALSA ABI 不匹配。所有安装方式
-都只包含 Rust IBus 引擎，不再区分 GTK 设置版和无界面版。
+请选择与目标发行版和版本一致的 `.deb` 或 `.rpm`，避免 glibc 和 ALSA ABI 不匹配。
+所有安装方式都只包含 Rust IBus 引擎，不再区分 GTK 设置版和无界面版。Rust、编译器和
+开发库只在自行构建时需要，安装预构建包不需要 Rust 工具链。
 
 ## 构建 `.deb` 包
 
@@ -32,19 +32,48 @@ sudo apt install ./target/debian/typeless-ibus_*.deb
 安装完成后注销并重新登录，或重新启动 IBus。随后在桌面环境的输入源设置中添加
 `typeless-ibus`；GNOME 用户可打开“设置 → 键盘 → 输入源”。
 
-## 其他发行版从源码安装
+## 安装原生 `.rpm`
+
+从 [GitHub Releases](https://github.com/day253/typeless-ibus/releases) 下载与发行版版本
+一致的 x86_64 RPM。Fedora 不能混用不同版本的构建，openSUSE 也应使用 Tumbleweed
+构建：
+
+```bash
+# Fedora 43/44
+sudo dnf install ./typeless-ibus-*.x86_64.rpm
+
+# openSUSE Tumbleweed
+sudo zypper install ./typeless-ibus-*.x86_64.rpm
+```
+
+RPM 安装后同样需要重新登录或重启 IBus，再从桌面输入源设置中添加 `typeless-ibus`。
+
+## 构建原生 `.rpm`
 
 Fedora：
 
 ```bash
-sudo dnf install gcc make pkgconf-pkg-config alsa-lib-devel opus-devel ibus
+sudo dnf install cargo rust gcc gcc-c++ make cmake pkgconf-pkg-config \
+  alsa-lib-devel opus-devel ibus rpm-build redhat-rpm-config
 ```
 
 openSUSE：
 
 ```bash
-sudo zypper install gcc make pkg-config alsa-devel libopus-devel ibus
+sudo zypper install cargo rust gcc gcc-c++ make cmake pkg-config \
+  alsa-devel libopus-devel ibus rpm-build
 ```
+
+克隆项目后执行：
+
+```bash
+./packaging/build-rpm.sh
+```
+
+脚本先生成带 vendored Cargo 依赖的源码归档，再由 `rpmbuild` 离线编译并运行测试。
+二进制 RPM 位于 `target/rpm/RPMS/`，SRPM 位于 `target/rpm/SRPMS/`。
+
+## Arch Linux 从源码安装
 
 Arch Linux：
 
@@ -59,7 +88,7 @@ cargo build --release --locked
 ./packaging/install-user.sh
 ```
 
-该安装方式只写入当前用户的 `~/.local`，不需要维护 RPM 或 PKGBUILD。
+该安装方式只写入当前用户的 `~/.local`，不需要维护 PKGBUILD。
 
 ## Nix Flake
 

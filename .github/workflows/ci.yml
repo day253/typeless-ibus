@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
 
 jobs:
@@ -104,12 +105,10 @@ jobs:
           path: target/debian/*.deb
           if-no-files-found: error
 
-  ibus-distribution-compatibility:
-    name: ${{ matrix.name }} / IBus protocol
+  rpm-distribution-compatibility:
+    name: ${{ matrix.name }} / IBus protocol / .rpm
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
-    env:
-      PATH: /github/home/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     strategy:
       fail-fast: false
       matrix:
@@ -126,18 +125,16 @@ jobs:
             image: opensuse/tumbleweed:latest
             family: opensuse
             key: opensuse-tumbleweed
-          - name: Arch Linux
-            image: archlinux:base-devel
-            family: arch
-            key: arch-linux
     steps:
-      - name: Install build and IBus test dependencies
+      - name: Install native RPM build and IBus test dependencies
         run: |
           case "${{ matrix.family }}" in
             fedora)
               dnf install -y --setopt=install_weak_deps=False \
                 alsa-lib-devel \
                 ca-certificates \
+                cargo \
+                cmake \
                 curl \
                 dbus-daemon \
                 dbus-tools \
@@ -149,6 +146,9 @@ jobs:
                 make \
                 opus-devel \
                 pkgconf-pkg-config \
+                redhat-rpm-config \
+                rpm-build \
+                rust \
                 tar \
                 zstd
               ;;
@@ -159,6 +159,7 @@ jobs:
                 bash \
                 ca-certificates \
                 cargo \
+                cmake \
                 curl \
                 dbus-1-daemon \
                 gcc \
@@ -170,33 +171,73 @@ jobs:
                 libopus-devel \
                 make \
                 pkg-config \
+                rpm-build \
                 rust \
-                tar \
-                zstd
-              ;;
-            arch)
-              pacman -Syu --noconfirm --needed \
-                alsa-lib \
-                base-devel \
-                ca-certificates \
-                curl \
-                dbus \
-                git \
-                glib2 \
-                ibus \
-                opus \
-                pkgconf \
                 tar \
                 zstd
               ;;
           esac
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-        if: matrix.family != 'opensuse'
-      - uses: Swatinem/rust-cache@v2.9.1
-        if: matrix.family != 'opensuse'
+      - name: Build distribution-native binary and source RPMs
+        run: ./packaging/build-rpm.sh
+      - name: Install and verify RPM metadata and layout
+        run: |
+          rpm_file=$(find target/rpm/RPMS -type f -name 'typeless-ibus-*.rpm' -print -quit)
+          test -n "$rpm_file"
+          rpm -Uvh "$rpm_file"
+          rpm -q typeless-ibus
+          rpm -q --requires typeless-ibus | grep -Fx 'ibus >= 1.5.22'
+          engine=$(rpm -ql typeless-ibus | sed -n '/\/typeless-ibus-engine$/p')
+          test -n "$engine"
+          test -x "$engine"
+          test -f /usr/share/ibus/component/typeless.xml
+          grep -F "<exec>$engine</exec>" /usr/share/ibus/component/typeless.xml
+      - name: Exercise the installed RPM through the IBus D-Bus protocol
+        run: |
+          engine=$(rpm -ql typeless-ibus | sed -n '/\/typeless-ibus-engine$/p')
+          dbus-run-session -- ./tests/ibus-protocol.sh "$engine"
+      - name: Verify clean RPM removal
+        run: |
+          engine=$(rpm -ql typeless-ibus | sed -n '/\/typeless-ibus-engine$/p')
+          rpm -e typeless-ibus
+          test ! -e "$engine"
+          test ! -e /usr/share/ibus/component/typeless.xml
+      - name: Upload distribution-native RPMs
+        uses: actions/upload-artifact@v4
         with:
-          shared-key: ${{ matrix.key }}
+          name: typeless-ibus-rpm-${{ matrix.key }}-x86_64
+          path: |
+            target/rpm/RPMS/**/*.rpm
+            target/rpm/SRPMS/*.rpm
+          if-no-files-found: error
+
+  arch-compatibility:
+    name: Arch Linux / IBus protocol
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    env:
+      PATH: /github/home/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - name: Install build and IBus test dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            alsa-lib \
+            base-devel \
+            ca-certificates \
+            curl \
+            dbus \
+            git \
+            glib2 \
+            ibus \
+            opus \
+            pkgconf \
+            tar \
+            zstd
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2.9.1
+        with:
+          shared-key: arch-linux
       - name: Build release engine
         run: cargo build --release --locked
       - name: Exercise the IBus D-Bus protocol
@@ -267,3 +308,37 @@ jobs:
             echo "### ⚠️ Doubao ASR availability probe failed" >> "$GITHUB_STEP_SUMMARY"
             echo "This is non-blocking because GitHub runner networks may be rejected by the upstream service. See the preceding step for x_tt_logid and status details." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  release-rpms:
+    name: Attach native RPMs to GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: rpm-distribution-compatibility
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify tag matches the package version
+        run: |
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | sed -n '1p')
+          test "$GITHUB_REF_NAME" = "v$version"
+      - name: Download native RPM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: typeless-ibus-rpm-*
+          path: release-rpms
+          merge-multiple: true
+      - name: Create the release and upload RPMs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -n "$(find release-rpms -type f -name '*.rpm' -print -quit)"
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" \
+              --verify-tag \
+              --generate-notes \
+              --title "typeless-ibus $GITHUB_REF_NAME"
+          fi
+          find release-rpms -type f -name '*.rpm' -print0 \
+            | xargs -0 gh release upload "$GITHUB_REF_NAME" --clobber

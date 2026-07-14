@@ -6,7 +6,7 @@
 [更新日志](../CHANGELOG.md)
 
 - [发行版支持范围](distributions.md)：已验证版本、安装方式和兼容边界。
-- [安装与卸载](installation.md)：系统依赖、原生 `.deb`、Nix 和用户级安装。
+- [安装与卸载](installation.md)：系统依赖、原生 `.deb`/`.rpm`、Nix 和用户级安装。
 - [使用与配置](usage.md)：触发方式、IBus 配置菜单和高级配置。
 - [架构与设计](architecture.md)：IBus、音频、ASR 和故障恢复流程。
 - [开发与验证](development.md)：本地检查、打包和 GitHub Actions。
