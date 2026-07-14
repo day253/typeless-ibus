@@ -1,6 +1,6 @@
 [package]
 name = "typeless-ibus"
-version = "0.3.0"
+version = "0.4.0"
 description = "Native IBus voice input engine for Linux"
 authors = ["day253 <9634619+day253@users.noreply.github.com>"]
 license = "MIT"
@@ -11,6 +11,10 @@ readme = "README.md"
 [[bin]]
 name = "typeless-ibus-engine"
 path = "src/main.rs"
+
+[[bin]]
+name = "typeless-ibus-settings"
+path = "src/settings.rs"
 
 [dependencies]
 anyhow = "1"
@@ -31,6 +35,9 @@ uuid = { version = "1.23.4", features = ["v4"] }
 xkeysym = "0.2.1"
 zbus = { version = "5.13.2", default-features = false, features = ["tokio"] }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = { package = "gtk4", version = "0.11.4" }
+
 [profile.release]
 codegen-units = 1
 lto = "thin"
@@ -45,7 +52,9 @@ depends = "$auto, ibus (>= 1.5.29)"
 maintainer-scripts = "packaging"
 assets = [
   ["target/release/typeless-ibus-engine", "usr/libexec/typeless-ibus-engine", "755"],
+  ["target/release/typeless-ibus-settings", "usr/libexec/typeless-ibus-settings", "755"],
   ["data/typeless.xml", "usr/share/ibus/component/typeless.xml", "644"],
+  ["data/typeless-settings.desktop", "usr/share/applications/typeless-settings.desktop", "644"],
   ["data/typeless.png", "usr/share/icons/hicolor/128x128/apps/typeless.png", "644"],
   ["data/config.example.json", "usr/share/doc/typeless-ibus/config.example.json", "644"],
   ["README.md", "usr/share/doc/typeless-ibus/README.md", "644"],

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Typeless Voice Settings
+Name[zh_CN]=Typeless Voice 设置
+Comment=Configure the Typeless IBus voice input engine
+Comment[zh_CN]=配置 Typeless IBus 语音输入法
+Exec=/usr/libexec/typeless-ibus-settings
+Icon=typeless
+Terminal=false
+Categories=Settings;Utility;
+StartupNotify=true

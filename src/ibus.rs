@@ -141,5 +141,6 @@ mod tests {
         assert!(xml.contains(&format!("<name>{COMPONENT_NAME}</name>")));
         assert!(xml.contains(&format!("<name>{ENGINE_NAME}</name>")));
         assert!(xml.contains("/usr/libexec/typeless-ibus-engine"));
+        assert!(xml.contains("<setup>/usr/libexec/typeless-ibus-settings</setup>"));
     }
 }

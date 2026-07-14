@@ -1,11 +1,10 @@
 mod asr;
-mod audio;
-mod config;
 mod engine;
 mod ibus;
 
 use anyhow::{Result, bail};
-use config::Config;
+use typeless_ibus::config::Config;
+use typeless_ibus::{audio, config};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
