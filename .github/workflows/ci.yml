@@ -158,6 +158,7 @@ jobs:
                 alsa-devel \
                 bash \
                 ca-certificates \
+                cargo \
                 curl \
                 dbus-1-daemon \
                 gcc \
@@ -169,6 +170,7 @@ jobs:
                 libopus-devel \
                 make \
                 pkg-config \
+                rust \
                 tar \
                 zstd
               ;;
@@ -190,7 +192,9 @@ jobs:
           esac
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+        if: matrix.family != 'opensuse'
       - uses: Swatinem/rust-cache@v2.9.1
+        if: matrix.family != 'opensuse'
         with:
           shared-key: ${{ matrix.key }}
       - name: Build release engine
