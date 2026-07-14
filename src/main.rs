@@ -67,6 +67,11 @@ async fn run() -> Result<()> {
             println!("check: ok");
             return Ok(());
         }
+        Some("--check-asr") => {
+            let credentials_path = config::credentials_path()?;
+            asr::diagnose_service(&credentials_path).await?;
+            return Ok(());
+        }
         Some("--ibus") | None => {}
         Some(argument) => bail!("未知参数：{argument}；使用 --help 查看帮助"),
     }
@@ -111,6 +116,7 @@ fn print_help() {
          Options:\n\
            --ibus                  Run as an IBus engine (default)\n\
            --check                 Check configuration, IBus and microphones\n\
+           --check-asr             Diagnose ASR APIs without IBus or audio\n\
            --list-devices          List microphone devices\n\
            --config-path           Print configuration path\n\
            --print-config          Print the effective configuration\n\

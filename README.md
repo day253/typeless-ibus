@@ -93,10 +93,15 @@ GTK4 设置窗口。也可以从应用列表打开“Typeless Voice 设置”。
 /usr/libexec/typeless-ibus-engine --print-config
 /usr/libexec/typeless-ibus-engine --list-devices
 /usr/libexec/typeless-ibus-engine --check
+/usr/libexec/typeless-ibus-engine --check-asr
 ```
 
 系统包中的程序位于 `/usr/libexec/typeless-ibus-*`；用户安装版本位于
 `~/.local/libexec/typeless-ibus-*`。
+
+`--check-asr` 不读取麦克风，也不依赖 IBus 或 GTK。它会独立检查 settings Token 接口和
+WebSocket 的 `StartTask`、`StartSession` 握手，并隐藏所有凭据。首次握手失败时会使用
+同一设备身份重试；仍失败才临时注册一个仅用于诊断的新身份，不覆盖本地凭据。
 
 ## 架构
 
