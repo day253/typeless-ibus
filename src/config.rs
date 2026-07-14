@@ -6,14 +6,14 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use xkeysym::{Keysym, key};
 
-pub const TRIGGER_KEY_CHOICES: &[(&str, &str)] = &[
-    ("XF86_Fn", "Fn"),
-    ("Control_R", "右 Ctrl"),
-    ("Control_L", "左 Ctrl"),
-    ("F8", "F8"),
-    ("F9", "F9"),
-    ("F10", "F10"),
-    ("Space", "空格"),
+pub const TRIGGER_KEY_CHOICES: &[&str] = &[
+    "XF86_Fn",
+    "Control_R",
+    "Control_L",
+    "F8",
+    "F9",
+    "F10",
+    "Space",
 ];
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -151,13 +151,6 @@ pub fn credentials_path() -> Result<PathBuf> {
     Ok(base.join("typeless-ibus/credentials.json"))
 }
 
-pub fn trigger_key_label(value: &str) -> &str {
-    TRIGGER_KEY_CHOICES
-        .iter()
-        .find_map(|(key, label)| (*key == value).then_some(*label))
-        .unwrap_or(value)
-}
-
 fn home_dir() -> Result<PathBuf> {
     env::var_os("HOME")
         .map(PathBuf::from)
@@ -214,11 +207,9 @@ mod tests {
     }
 
     #[test]
-    fn trigger_choice_labels_match_supported_keys() {
-        for (value, _) in TRIGGER_KEY_CHOICES {
+    fn trigger_choices_match_supported_keys() {
+        for value in TRIGGER_KEY_CHOICES {
             assert!(parse_trigger_key(value).is_ok());
         }
-        assert_eq!(trigger_key_label("Control_R"), "右 Ctrl");
-        assert_eq!(trigger_key_label("0xffc5"), "0xffc5");
     }
 }

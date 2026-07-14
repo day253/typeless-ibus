@@ -3,6 +3,10 @@
 typeless-ibus 是 Linux 原生 IBus 组件。按键事件、预编辑文本和最终提交全部通过 IBus
 接口完成，不依赖剪贴板、模拟粘贴或 X11。
 
+项目仅实现 IBus 引擎。GTK、Qt、XIM 和 Wayland 应用的输入由发行版提供的 IBus
+集成模块覆盖，不再增加并行前端。设置通过 IBus 属性菜单、Rust CLI 和 JSON 完成，
+无 GTK 设置程序，当前范围也不包含 Fcitx5。
+
 ## 数据流
 
 ```text

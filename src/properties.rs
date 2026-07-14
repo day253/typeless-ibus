@@ -1,4 +1,5 @@
-use crate::config::{Config, TRIGGER_KEY_CHOICES, TriggerMode, trigger_key_label};
+use crate::config::{Config, TRIGGER_KEY_CHOICES, TriggerMode};
+use crate::i18n::{Language, current_language};
 use std::collections::HashMap;
 use zbus::zvariant::{Structure, Value};
 
@@ -17,29 +18,73 @@ pub enum ConfigAction {
 }
 
 pub fn config_properties(config: &Config) -> Value<'static> {
+    config_properties_for_language(config, current_language())
+}
+
+struct UiLabels {
+    mode: &'static str,
+    mode_hold: &'static str,
+    mode_toggle: &'static str,
+    hold_help: &'static str,
+    toggle_help: &'static str,
+    trigger: &'static str,
+    control_right: &'static str,
+    control_left: &'static str,
+    space: &'static str,
+    separator: &'static str,
+}
+
+const ENGLISH_LABELS: UiLabels = UiLabels {
+    mode: "Trigger mode",
+    mode_hold: "Hold",
+    mode_toggle: "Toggle",
+    hold_help: "Hold: press to start, release to stop",
+    toggle_help: "Toggle: press once to start, again to stop",
+    trigger: "Trigger key",
+    control_right: "Right Ctrl",
+    control_left: "Left Ctrl",
+    space: "Space",
+    separator: ": ",
+};
+
+const CHINESE_LABELS: UiLabels = UiLabels {
+    mode: "触发方式",
+    mode_hold: "长按",
+    mode_toggle: "切换",
+    hold_help: "长按：按下开始，松开结束",
+    toggle_help: "切换：按一次开始，再按一次结束",
+    trigger: "触发键",
+    control_right: "右 Ctrl",
+    control_left: "左 Ctrl",
+    space: "空格",
+    separator: "：",
+};
+
+fn config_properties_for_language(config: &Config, language: Language) -> Value<'static> {
+    let labels = labels(language);
     let mode_label = match config.trigger_mode {
-        TriggerMode::Hold => "长按",
-        TriggerMode::Toggle => "切换",
+        TriggerMode::Hold => labels.mode_hold,
+        TriggerMode::Toggle => labels.mode_toggle,
     };
     let mode_items = vec![
         radio_property(
             "typeless.mode.hold",
-            "长按：按下开始，松开结束",
+            labels.hold_help,
             config.trigger_mode == TriggerMode::Hold,
         ),
         radio_property(
             "typeless.mode.toggle",
-            "切换：按一次开始，再按一次结束",
+            labels.toggle_help,
             config.trigger_mode == TriggerMode::Toggle,
         ),
     ];
 
     let trigger_items = TRIGGER_KEY_CHOICES
         .iter()
-        .map(|(value, label)| {
+        .map(|value| {
             radio_property(
                 &format!("{TRIGGER_PREFIX}{value}"),
-                label,
+                trigger_key_label(labels, value),
                 config.trigger_key == *value,
             )
         })
@@ -48,15 +93,37 @@ pub fn config_properties(config: &Config) -> Value<'static> {
     Value::new(prop_list(vec![
         menu_property(
             "typeless.mode",
-            &format!("触发方式：{mode_label}"),
+            &format!("{}{}{}", labels.mode, labels.separator, mode_label),
             mode_items,
         ),
         menu_property(
             "typeless.trigger",
-            &format!("触发键：{}", trigger_key_label(&config.trigger_key)),
+            &format!(
+                "{}{}{}",
+                labels.trigger,
+                labels.separator,
+                trigger_key_label(labels, &config.trigger_key)
+            ),
             trigger_items,
         ),
     ]))
+}
+
+fn labels(language: Language) -> &'static UiLabels {
+    match language {
+        Language::English => &ENGLISH_LABELS,
+        Language::Chinese => &CHINESE_LABELS,
+    }
+}
+
+fn trigger_key_label<'a>(labels: &UiLabels, value: &'a str) -> &'a str {
+    match value {
+        "XF86_Fn" => "Fn",
+        "Control_R" => labels.control_right,
+        "Control_L" => labels.control_left,
+        "Space" => labels.space,
+        _ => value,
+    }
 }
 
 pub fn action_for_activation(name: &str, state: u32) -> Option<ConfigAction> {
@@ -72,8 +139,7 @@ pub fn action_for_activation(name: &str, state: u32) -> Option<ConfigAction> {
     }
     let trigger = name.strip_prefix(TRIGGER_PREFIX)?;
     TRIGGER_KEY_CHOICES
-        .iter()
-        .any(|(value, _)| *value == trigger)
+        .contains(&trigger)
         .then(|| ConfigAction::SetTrigger(trigger.to_string()))
 }
 
@@ -168,6 +234,20 @@ mod tests {
         assert_eq!(
             action_for_activation("typeless.trigger.Unknown", PROP_STATE_CHECKED),
             None
+        );
+    }
+
+    #[test]
+    fn english_and_chinese_labels_are_complete() {
+        assert_eq!(labels(Language::English).mode, "Trigger mode");
+        assert_eq!(
+            trigger_key_label(labels(Language::English), "Control_R"),
+            "Right Ctrl"
+        );
+        assert_eq!(labels(Language::Chinese).mode, "触发方式");
+        assert_eq!(
+            trigger_key_label(labels(Language::Chinese), "Control_R"),
+            "右 Ctrl"
         );
     }
 }

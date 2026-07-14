@@ -16,7 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - ALSA/cpal microphone capture, 16 kHz mono PCM processing, Opus encoding, and Doubao IME ASR.
 - IBus preedit updates and direct `CommitText` output to the focused application.
 - Native IBus property menus for changing the trigger key and recording mode without a GUI toolkit.
+- English and Chinese IBus property labels selected automatically from the desktop locale.
 - JSON configuration with Debian package and user-level installation support.
+- IBus 1.5.22 compatibility with native Ubuntu 20.04, 22.04, 24.04, and 26.04 protocol-tested Debian builds.
+- Nix Flake packages for x86_64-linux and aarch64-linux.
 - ASR handshake and real-audio diagnostics with `x-tt-logid` logging.
 - Automatic credential recovery and buffered audio replay after `service discovery failure`.
 - Ubuntu CI for formatting, Clippy, tests, release builds, Debian packaging, and a separate

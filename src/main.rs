@@ -5,7 +5,7 @@ mod ibus;
 use anyhow::{Context, Result, bail};
 use std::path::Path;
 use typeless_ibus::config::{Config, ConfigStore, TriggerMode};
-use typeless_ibus::{audio, config, properties};
+use typeless_ibus::{audio, config, i18n, properties};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 

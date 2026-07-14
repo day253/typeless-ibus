@@ -29,8 +29,86 @@ jobs:
           path: target/release/typeless-ibus-engine
           if-no-files-found: error
           retention-days: 1
-      - run: cargo install cargo-deb --version 3.7.0 --locked
-      - run: cargo deb --no-build
+
+  ubuntu-compatibility:
+    name: Ubuntu ${{ matrix.ubuntu }} / IBus protocol / .deb
+    runs-on: ubuntu-24.04
+    container: ubuntu:${{ matrix.ubuntu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ["20.04", "22.04", "24.04", "26.04"]
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install build and IBus test dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            curl \
+            dbus \
+            dbus-x11 \
+            git \
+            ibus \
+            libasound2-dev \
+            libglib2.0-bin \
+            libopus-dev \
+            pkg-config \
+            zstd
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2.9.1
+        with:
+          shared-key: ubuntu-${{ matrix.ubuntu }}
+      - name: Build release engine
+        run: cargo build --release --locked
+      - name: Exercise the IBus D-Bus protocol
+        run: dbus-run-session -- ./tests/ibus-protocol.sh target/release/typeless-ibus-engine
+      - name: Build distribution-native Debian package
+        run: |
+          cargo install cargo-deb --version 3.7.0 --locked
+          cargo deb --no-build
+      - name: Verify Debian dependency floor
+        run: |
+          deb=$(find target/debian -name '*.deb' -print -quit)
+          depends=$(dpkg-deb -f "$deb" Depends)
+          echo "$depends"
+          echo "$depends" | grep -F 'ibus (>= 1.5.22)'
+      - name: Upload distribution-native Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: typeless-ibus-deb-ubuntu-${{ matrix.ubuntu }}-x86_64
+          path: target/debian/*.deb
+          if-no-files-found: error
+
+  nix:
+    name: Nix / ${{ matrix.system }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            system: x86_64-linux
+          - runner: ubuntu-24.04-arm
+            system: aarch64-linux
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: experimental-features = nix-command flakes
+      - name: Check the flake
+        run: nix flake check --print-build-logs --no-update-lock-file
+      - name: Build the native package
+        run: nix build --print-build-logs --no-update-lock-file ".#packages.${{ matrix.system }}.default"
+      - name: Verify package layout
+        run: |
+          test -x result/libexec/typeless-ibus-engine
+          test -x result/bin/typeless-ibus-engine
+          engine=$(readlink -f result/libexec/typeless-ibus-engine)
+          grep -F "$engine" result/share/ibus/component/typeless.xml
 
   asr-availability:
     name: ASR availability (non-blocking)

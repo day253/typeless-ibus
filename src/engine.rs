@@ -1,6 +1,7 @@
 use crate::asr::{self, AsrEvent};
 use crate::audio::AudioCaptureHandle;
 use crate::config::{ConfigStore, TriggerMode};
+use crate::i18n;
 use crate::properties::{self, ConfigAction};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -64,7 +65,10 @@ impl VoiceEngine {
         let (capture, audio_rx) = match AudioCaptureHandle::start(config.input_device.as_deref()) {
             Ok(value) => value,
             Err(error) => {
-                let message = format!("无法启动麦克风：{error:#}");
+                let message = format!(
+                    "{}{error:#}",
+                    i18n::text("Unable to start the microphone: ", "无法启动麦克风：")
+                );
                 tracing::error!(%message);
                 show_error(emitter, message).await;
                 return;
@@ -80,7 +84,7 @@ impl VoiceEngine {
         };
 
         let _ = Self::update_auxiliary_text(emitter, ibus_text(String::new()), false).await;
-        update_preedit(emitter, "🎙 按住并说话…").await;
+        update_preedit(emitter, i18n::text("🎙 Hold and speak…", "🎙 按住并说话…")).await;
 
         let owned_emitter = emitter.to_owned();
         let session = self.session.clone();
@@ -98,7 +102,11 @@ impl VoiceEngine {
             tokio::time::sleep(max_duration).await;
             if request_stop(&session, generation) {
                 tracing::warn!(generation, "maximum recording duration reached");
-                update_preedit(&owned_emitter, "正在完成识别…").await;
+                update_preedit(
+                    &owned_emitter,
+                    i18n::text("Finishing recognition…", "正在完成识别…"),
+                )
+                .await;
             }
         });
     }
@@ -117,7 +125,11 @@ impl VoiceEngine {
             }
         };
         if should_stop {
-            update_preedit(emitter, "正在完成识别…").await;
+            update_preedit(
+                emitter,
+                i18n::text("Finishing recognition…", "正在完成识别…"),
+            )
+            .await;
         }
     }
 
@@ -129,7 +141,10 @@ impl VoiceEngine {
             Phase::Processing => {
                 let _ = Self::update_auxiliary_text(
                     emitter,
-                    ibus_text("正在完成上一段识别…".to_string()),
+                    ibus_text(
+                        i18n::text("Finishing the previous recording…", "正在完成上一段识别…")
+                            .to_string(),
+                    ),
                     true,
                 )
                 .await;
@@ -144,7 +159,7 @@ impl VoiceEngine {
             if show_message {
                 let _ = Self::update_auxiliary_text(
                     emitter,
-                    ibus_text("已取消语音输入".to_string()),
+                    ibus_text(i18n::text("Voice input canceled", "已取消语音输入").to_string()),
                     true,
                 )
                 .await;
@@ -233,7 +248,15 @@ impl VoiceEngine {
                 ConfigAction::SetMode(mode) => config.trigger_mode = mode,
                 ConfigAction::SetTrigger(trigger) => config.trigger_key = trigger,
             })
-            .map_err(|error| fdo::Error::Failed(format!("保存 Typeless 配置失败：{error:#}")))?;
+            .map_err(|error| {
+                fdo::Error::Failed(format!(
+                    "{}{error:#}",
+                    i18n::text(
+                        "Failed to save typeless-ibus configuration: ",
+                        "保存 typeless-ibus 配置失败："
+                    )
+                ))
+            })?;
         tracing::info!(
             trigger = %next.trigger_key,
             mode = ?next.trigger_mode,
@@ -383,7 +406,13 @@ async fn run_recognition(
                         return;
                     }
                     match event {
-                        AsrEvent::SpeechStarted => update_preedit(&emitter, "🎙 正在识别…").await,
+                        AsrEvent::SpeechStarted => {
+                            update_preedit(
+                                &emitter,
+                                i18n::text("🎙 Recognizing…", "🎙 正在识别…"),
+                            )
+                            .await
+                        }
                         AsrEvent::Partial(text) | AsrEvent::Final(text) => {
                             update_preedit(&emitter, &text).await;
                         }
@@ -403,7 +432,17 @@ async fn run_recognition(
             let text = text.trim().to_string();
             if let Err(error) = VoiceEngine::commit_text(&emitter, ibus_text(text.clone())).await {
                 tracing::error!(%error, "failed to commit recognized text");
-                show_error(&emitter, format!("提交识别结果失败：{error}")).await;
+                show_error(
+                    &emitter,
+                    format!(
+                        "{}{error}",
+                        i18n::text(
+                            "Failed to insert the recognition result: ",
+                            "提交识别结果失败："
+                        )
+                    ),
+                )
+                .await;
             } else {
                 tracing::info!(
                     characters = text.chars().count(),
@@ -414,10 +453,23 @@ async fn run_recognition(
                         .await;
             }
         }
-        Ok(_) => show_error(&emitter, "没有识别到语音".to_string()).await,
+        Ok(_) => {
+            show_error(
+                &emitter,
+                i18n::text("No speech was recognized", "没有识别到语音").to_string(),
+            )
+            .await
+        }
         Err(error) => {
             tracing::error!(error = %format_args!("{error:#}"), "speech recognition failed");
-            show_error(&emitter, format!("语音识别失败：{error:#}")).await;
+            show_error(
+                &emitter,
+                format!(
+                    "{}{error:#}",
+                    i18n::text("Speech recognition failed: ", "语音识别失败：")
+                ),
+            )
+            .await;
         }
     }
 }

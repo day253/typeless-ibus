@@ -41,7 +41,7 @@ strip = true
 name = "typeless-ibus"
 section = "utils"
 priority = "optional"
-depends = "$auto, ibus (>= 1.5.29)"
+depends = "$auto, ibus (>= 1.5.22)"
 maintainer-scripts = "packaging"
 assets = [
   ["target/release/typeless-ibus-engine", "usr/libexec/typeless-ibus-engine", "755"],
