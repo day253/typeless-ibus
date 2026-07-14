@@ -24,8 +24,8 @@ src/ibus.rs       IBus D-Bus 组件、Factory 与引擎注册
 src/engine.rs     长按/切换触发、录音会话和 IBus 文本提交
 src/audio.rs      麦克风采集、单声道混音与重采样
 src/asr.rs        设备注册、Token、Protobuf、WebSocket 与 Opus
-src/config.rs     JSON 配置、按键解析与本地路径
-src/settings.rs   GTK4 原生设置窗口和 IBus 配置重载
+src/config.rs     JSON 配置、共享状态、按键解析与本地路径
+src/properties.rs IBus 原生配置菜单与菜单操作解析
 ```
 
 ## 输入会话

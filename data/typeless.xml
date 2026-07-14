@@ -16,7 +16,6 @@
       <language>zh_CN</language>
       <license>MIT</license>
       <author>day253</author>
-      <setup>/usr/libexec/typeless-ibus-settings</setup>
       <layout>us</layout>
       <symbol>vox</symbol>
       <rank>80</rank>

@@ -9,7 +9,7 @@ cargo test --all-targets --locked
 cargo build --release --locked
 ```
 
-产品运行时代码使用 Rust，Linux 设置界面使用 GTK4，不依赖 Python。
+产品运行时代码和 IBus 配置菜单均使用 Rust，不依赖 GUI 工具包或 Python。
 
 ## Debian 打包
 

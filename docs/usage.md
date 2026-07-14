@@ -12,18 +12,18 @@
 部分笔记本的 `Fn` 键由固件处理，不会向 Linux 上报 `XF86_Fn`。这种情况可以把
 触发键改成 `Control_R` 或 `F8`；这不是 Wayland 限制。
 
-## 原生设置界面
+## IBus 配置菜单
 
-在 Ubuntu“设置 → 键盘 → 输入源”中选择 `Typeless Voice`，点击设置按钮即可打开 GTK4
-设置窗口。设置程序不会显示在应用列表中。
+切换到 `Typeless Voice` 后，打开 Ubuntu 顶栏的输入法菜单，可以直接修改：
 
-用户级安装也可以直接运行：
+- 触发方式：长按或按键切换。
+- 触发键：`Fn`、左右 Ctrl、F8、F9、F10 或空格。
 
-```bash
-~/.local/libexec/typeless-ibus-settings
-```
+菜单由 IBus 和桌面环境绘制，不需要独立设置程序。选择后会立即生效并写入配置文件，
+不需要重新启动 IBus。
 
-点击“保存并应用”后，程序会保存配置并重新加载 IBus。
+麦克风默认跟随系统输入设备，最长录音时间默认是 120 秒。这两个低频选项保留在配置
+文件和命令行中。
 
 ## 配置文件
 
@@ -50,7 +50,20 @@
 - `inputDevice`：`null` 使用默认麦克风，也可以填写设备名称。
 - `maxRecordingSeconds`：允许 1 到 600 秒。
 
-手动修改 JSON 后需要重新启动 IBus。配置示例也可查看
+手动修改 JSON 后切换一次输入源即可重新读取。配置示例也可查看
 [`data/config.example.json`](../data/config.example.json)。
+
+## 命令行配置
+
+```bash
+typeless-ibus-engine config show
+typeless-ibus-engine config set trigger-key Control_R
+typeless-ibus-engine config set trigger-mode hold
+typeless-ibus-engine config set input-device default
+typeless-ibus-engine config set max-recording-seconds 120
+typeless-ibus-engine config reset
+```
+
+使用命令行或手动修改 JSON 后，切换一次输入源即可让新引擎实例读取配置。
 
 [返回文档索引](README.md)

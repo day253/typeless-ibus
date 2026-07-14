@@ -5,13 +5,13 @@
 - Ubuntu 或 Debian
 - IBus 1.5.29+
 - Rust stable
-- GTK4、ALSA 和 Opus 开发库
+- ALSA 和 Opus 开发库
 
 ## 构建 Debian 包
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential pkg-config libasound2-dev libgtk-4-dev libopus-dev ibus
+sudo apt install -y build-essential pkg-config libasound2-dev libopus-dev ibus
 
 git clone https://github.com/day253/typeless.git
 cd typeless
@@ -46,7 +46,7 @@ cargo build --release --locked
 
 ## 程序路径
 
-- 系统包：`/usr/libexec/typeless-ibus-*`
-- 用户级安装：`~/.local/libexec/typeless-ibus-*`
+- 系统包：`/usr/libexec/typeless-ibus-engine`
+- 用户级安装：`~/.local/libexec/typeless-ibus-engine`
 
 [返回文档索引](README.md)

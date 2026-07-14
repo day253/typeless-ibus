@@ -1,6 +1,7 @@
 use crate::asr::{self, AsrEvent};
 use crate::audio::AudioCaptureHandle;
-use crate::config::{Config, TriggerMode};
+use crate::config::{ConfigStore, TriggerMode};
+use crate::properties::{self, ConfigAction};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -37,14 +38,14 @@ impl Default for SessionState {
 }
 
 pub struct VoiceEngine {
-    config: Config,
+    config: ConfigStore,
     credentials_path: PathBuf,
     session: Arc<Mutex<SessionState>>,
     content_type: (u32, u32),
 }
 
 impl VoiceEngine {
-    pub fn new(config: Config, credentials_path: PathBuf) -> Self {
+    pub fn new(config: ConfigStore, credentials_path: PathBuf) -> Self {
         Self {
             config,
             credentials_path,
@@ -59,16 +60,16 @@ impl VoiceEngine {
             return;
         }
 
-        let (capture, audio_rx) =
-            match AudioCaptureHandle::start(self.config.input_device.as_deref()) {
-                Ok(value) => value,
-                Err(error) => {
-                    let message = format!("无法启动麦克风：{error:#}");
-                    tracing::error!(%message);
-                    show_error(emitter, message).await;
-                    return;
-                }
-            };
+        let config = self.config.snapshot();
+        let (capture, audio_rx) = match AudioCaptureHandle::start(config.input_device.as_deref()) {
+            Ok(value) => value,
+            Err(error) => {
+                let message = format!("无法启动麦克风：{error:#}");
+                tracing::error!(%message);
+                show_error(emitter, message).await;
+                return;
+            }
+        };
 
         let generation = {
             let mut session = lock_session(&self.session);
@@ -92,7 +93,7 @@ impl VoiceEngine {
             owned_emitter.clone(),
         ));
 
-        let max_duration = Duration::from_secs(self.config.max_recording_seconds);
+        let max_duration = Duration::from_secs(config.max_recording_seconds);
         tokio::spawn(async move {
             tokio::time::sleep(max_duration).await;
             if request_stop(&session, generation) {
@@ -151,11 +152,11 @@ impl VoiceEngine {
         }
     }
 
-    fn trigger_matches(&self, keyval: Keysym) -> bool {
-        self.config
-            .trigger_keysym()
-            .map(|configured| configured == keyval)
-            .unwrap_or(false)
+    async fn register_config_properties(&self, emitter: &SignalEmitter<'_>) {
+        let properties = properties::config_properties(&self.config.snapshot());
+        if let Err(error) = Self::register_properties(emitter, properties).await {
+            tracing::warn!(%error, "failed to register IBus configuration properties");
+        }
     }
 
     fn has_active_session(&self) -> bool {
@@ -176,14 +177,19 @@ impl VoiceEngine {
         let pressed = state & RELEASE_MASK == 0;
         tracing::debug!(keyval = keyval.raw(), state, pressed, "IBus key event");
 
-        if self.trigger_matches(keyval) {
+        let config = self.config.snapshot();
+        let is_trigger = config
+            .trigger_keysym()
+            .map(|configured| configured == keyval)
+            .unwrap_or(false);
+        if is_trigger {
             tracing::info!(
-                trigger = %self.config.trigger_key,
+                trigger = %config.trigger_key,
                 pressed,
-                mode = ?self.config.trigger_mode,
+                mode = ?config.trigger_mode,
                 "voice trigger event"
             );
-            match self.config.trigger_mode {
+            match config.trigger_mode {
                 TriggerMode::Hold => {
                     if pressed {
                         self.start_recording(&emitter).await;
@@ -212,7 +218,30 @@ impl VoiceEngine {
 
     fn set_capabilities(&mut self, _caps: u32) {}
 
-    fn property_activate(&mut self, _name: String, _state: u32) {}
+    async fn property_activate(
+        &mut self,
+        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
+        name: String,
+        state: u32,
+    ) -> fdo::Result<()> {
+        let Some(action) = properties::action_for_activation(&name, state) else {
+            return Ok(());
+        };
+        let next = self
+            .config
+            .update(|config| match action {
+                ConfigAction::SetMode(mode) => config.trigger_mode = mode,
+                ConfigAction::SetTrigger(trigger) => config.trigger_key = trigger,
+            })
+            .map_err(|error| fdo::Error::Failed(format!("保存 Typeless 配置失败：{error:#}")))?;
+        tracing::info!(
+            trigger = %next.trigger_key,
+            mode = ?next.trigger_mode,
+            "updated configuration from IBus property"
+        );
+        self.register_config_properties(&emitter).await;
+        Ok(())
+    }
 
     fn property_show(&mut self, _name: String) {}
 
@@ -220,9 +249,18 @@ impl VoiceEngine {
 
     fn candidate_clicked(&mut self, _index: u32, _button: u32, _state: u32) {}
 
-    fn focus_in(&mut self) {}
+    async fn focus_in(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
+        self.register_config_properties(&emitter).await;
+    }
 
-    fn focus_in_id(&mut self, _object_path: String, _client: String) {}
+    async fn focus_in_id(
+        &mut self,
+        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
+        _object_path: String,
+        _client: String,
+    ) {
+        self.register_config_properties(&emitter).await;
+    }
 
     async fn focus_out(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         self.cancel(&emitter, false).await;
@@ -240,7 +278,9 @@ impl VoiceEngine {
         self.cancel(&emitter, false).await;
     }
 
-    fn enable(&mut self) {}
+    async fn enable(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
+        self.register_config_properties(&emitter).await;
+    }
 
     async fn disable(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         self.cancel(&emitter, false).await;

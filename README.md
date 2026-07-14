@@ -14,8 +14,8 @@ already using.
 - **Native input method**: interim results appear as preedit text and final results are committed by IBus.
 - **Hold to talk**: hold `Fn` to record and release it to stop, with toggle mode and alternative keys available.
 - **Built for Wayland**: text input uses IBus D-Bus interfaces instead of keyboard or paste simulation.
-- **Native settings**: configure the trigger key, microphone, and recording limit in a GTK4 window.
-- **Small Rust codebase**: the engine and settings app are written in Rust, with no Python runtime or LLM.
+- **System-native controls**: change the trigger key and recording mode from the IBus input-source menu.
+- **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit, Python runtime, or LLM.
 - **Automatic recovery**: rejected ASR service discovery credentials are refreshed while the current audio is replayed.
 
 ## How it feels

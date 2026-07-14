@@ -14,13 +14,13 @@
 
 ## Fn 没有反应
 
-部分设备的 `Fn` 由键盘固件处理，Linux 收不到独立按键事件。请在设置中改用
-`Control_R`、`F8` 或其他受支持的 keysym。
+部分设备的 `Fn` 由键盘固件处理，Linux 收不到独立按键事件。请从 IBus 输入法菜单改用
+右 Ctrl、F8 或其他受支持的触发键。
 
 ## 找不到麦克风
 
-先运行 `--list-devices` 查看 cpal 能发现的输入设备，再在原生设置界面中选择设备。
-`inputDevice` 为 `null` 时使用系统默认麦克风。
+默认使用系统输入设备。先运行 `--list-devices` 查看 cpal 能发现的输入设备，再通过
+`config set input-device DEVICE` 选择设备；`default` 或配置文件中的 `null` 表示系统默认。
 
 ## IBus 中找不到输入法
 
@@ -38,7 +38,7 @@
 /usr/libexec/typeless-ibus-engine --check-asr
 ```
 
-该命令不读取麦克风，也不依赖 IBus 或 GTK。它会检查 settings Token 接口以及
+该命令不读取麦克风，也不依赖 IBus。它会检查 settings Token 接口以及
 WebSocket 的 `StartTask`、`StartSession` 握手，并隐藏所有凭据。首次握手失败时会使用
 同一设备身份重试；仍然失败才注册一个仅用于诊断的临时身份，且不会覆盖本地凭据。
 

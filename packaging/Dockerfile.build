@@ -8,7 +8,6 @@ RUN apt-get update \
         ca-certificates \
         curl \
         libasound2-dev \
-        libgtk-4-dev \
         libopus-dev \
         pkg-config \
     && rm -rf /var/lib/apt/lists/*

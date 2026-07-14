@@ -4,8 +4,8 @@ mod ibus;
 
 use anyhow::{Context, Result, bail};
 use std::path::Path;
-use typeless_ibus::config::Config;
-use typeless_ibus::{audio, config};
+use typeless_ibus::config::{Config, ConfigStore, TriggerMode};
+use typeless_ibus::{audio, config, properties};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -52,6 +52,10 @@ async fn run() -> Result<()> {
             println!("已写入默认配置：{}", path.display());
             return Ok(());
         }
+        Some("config") => {
+            run_config_command(arguments)?;
+            return Ok(());
+        }
         Some("--list-devices") => {
             print_audio_devices()?;
             return Ok(());
@@ -91,16 +95,101 @@ async fn run() -> Result<()> {
     }
 
     let config_path = config::config_path()?;
-    let config = Config::load_or_create(&config_path)?;
+    let config = ConfigStore::load(config_path.clone())?;
+    let effective = config.snapshot();
     let credentials_path = config::credentials_path()?;
     tracing::info!(
         config = %config_path.display(),
-        trigger = %config.trigger_key,
-        mode = ?config.trigger_mode,
+        trigger = %effective.trigger_key,
+        mode = ?effective.trigger_mode,
         "starting Typeless IBus engine"
     );
     let _connection = ibus::serve(config, credentials_path).await?;
     tokio::signal::ctrl_c().await?;
+    Ok(())
+}
+
+fn run_config_command(mut arguments: impl Iterator<Item = String>) -> Result<()> {
+    let path = config::config_path()?;
+    let command = arguments.next().unwrap_or_else(|| "show".to_string());
+    match command.as_str() {
+        "show" => {
+            reject_extra_argument(&mut arguments)?;
+            let config = Config::load_or_create(&path)?;
+            println!("{}", serde_json::to_string_pretty(&config)?);
+        }
+        "reset" => {
+            reject_extra_argument(&mut arguments)?;
+            Config::default().save(&path)?;
+            println!("已恢复默认配置：{}", path.display());
+        }
+        "set" => {
+            let key = arguments.next().context("config set 需要配置名和配置值")?;
+            let value = arguments.next().context("config set 需要配置名和配置值")?;
+            reject_extra_argument(&mut arguments)?;
+            validate_config_assignment(&key, &value)?;
+            let store = ConfigStore::load(path.clone())?;
+            store.update(|config| match key.as_str() {
+                "trigger-key" => config.trigger_key = value.clone(),
+                "trigger-mode" => {
+                    config.trigger_mode = match value.as_str() {
+                        "hold" => TriggerMode::Hold,
+                        "toggle" => TriggerMode::Toggle,
+                        _ => unreachable!("trigger mode was validated"),
+                    }
+                }
+                "input-device" => {
+                    config.input_device = match value.as_str() {
+                        "default" | "null" => None,
+                        _ => Some(value.clone()),
+                    }
+                }
+                "max-recording-seconds" => {
+                    config.max_recording_seconds =
+                        value.parse().expect("recording limit was validated");
+                }
+                _ => unreachable!("configuration key was validated"),
+            })?;
+            println!("已更新 {key}：{value}");
+            println!("切换一次输入源后，高级配置会在新引擎实例中生效。");
+        }
+        _ => bail!("未知 config 命令：{command}；可用 show、set、reset"),
+    }
+    Ok(())
+}
+
+fn validate_config_assignment(key: &str, value: &str) -> Result<()> {
+    match key {
+        "trigger-key" => {
+            let config = Config {
+                trigger_key: value.to_string(),
+                ..Config::default()
+            };
+            config.validate()
+        }
+        "trigger-mode" if matches!(value, "hold" | "toggle") => Ok(()),
+        "trigger-mode" => bail!("trigger-mode 只支持 hold 或 toggle"),
+        "input-device" => Ok(()),
+        "max-recording-seconds" => {
+            let seconds = value
+                .parse::<u64>()
+                .context("max-recording-seconds 必须是整数")?;
+            if (1..=600).contains(&seconds) {
+                Ok(())
+            } else {
+                bail!("max-recording-seconds 必须在 1 到 600 之间")
+            }
+        }
+        _ => bail!(
+            "未知配置项：{key}；可用 trigger-key、trigger-mode、input-device、max-recording-seconds"
+        ),
+    }
+}
+
+fn reject_extra_argument(arguments: &mut impl Iterator<Item = String>) -> Result<()> {
+    if let Some(extra) = arguments.next() {
+        bail!("收到多余参数：{extra}");
+    }
     Ok(())
 }
 
@@ -129,6 +218,9 @@ fn print_help() {
          \n\
          Options:\n\
            --ibus                  Run as an IBus engine (default)\n\
+           config show             Print the effective configuration\n\
+           config set KEY VALUE    Update one configuration value\n\
+           config reset            Restore the default configuration\n\
            --check                 Check configuration, IBus and microphones\n\
            --check-asr             Diagnose ASR APIs without IBus or audio\n\
            --check-asr-audio PATH  Recognize a 16 kHz mono s16le PCM fixture\n\

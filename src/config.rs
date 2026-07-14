@@ -3,7 +3,18 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use xkeysym::{Keysym, key};
+
+pub const TRIGGER_KEY_CHOICES: &[(&str, &str)] = &[
+    ("XF86_Fn", "Fn"),
+    ("Control_R", "右 Ctrl"),
+    ("Control_L", "左 Ctrl"),
+    ("F8", "F8"),
+    ("F9", "F9"),
+    ("F10", "F10"),
+    ("Space", "空格"),
+];
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -29,6 +40,51 @@ impl Default for Config {
             input_device: None,
             max_recording_seconds: 120,
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct ConfigStore {
+    path: Arc<PathBuf>,
+    value: Arc<RwLock<Config>>,
+}
+
+impl ConfigStore {
+    pub fn load(path: PathBuf) -> Result<Self> {
+        let value = Config::load_or_create(&path)?;
+        Ok(Self {
+            path: Arc::new(path),
+            value: Arc::new(RwLock::new(value)),
+        })
+    }
+
+    pub fn snapshot(&self) -> Config {
+        self.read().clone()
+    }
+
+    pub fn update(&self, change: impl FnOnce(&mut Config)) -> Result<Config> {
+        let mut current = self.write();
+        let mut next = current.clone();
+        change(&mut next);
+        next.save(self.path.as_ref())?;
+        *current = next.clone();
+        Ok(next)
+    }
+
+    pub fn reload(&self) -> Result<Config> {
+        let next = Config::load_or_create(self.path.as_ref())?;
+        *self.write() = next.clone();
+        Ok(next)
+    }
+
+    fn read(&self) -> RwLockReadGuard<'_, Config> {
+        self.value.read().unwrap_or_else(|error| error.into_inner())
+    }
+
+    fn write(&self) -> RwLockWriteGuard<'_, Config> {
+        self.value
+            .write()
+            .unwrap_or_else(|error| error.into_inner())
     }
 }
 
@@ -95,6 +151,13 @@ pub fn credentials_path() -> Result<PathBuf> {
     Ok(base.join("typeless-ibus/credentials.json"))
 }
 
+pub fn trigger_key_label(value: &str) -> &str {
+    TRIGGER_KEY_CHOICES
+        .iter()
+        .find_map(|(key, label)| (*key == value).then_some(*label))
+        .unwrap_or(value)
+}
+
 fn home_dir() -> Result<PathBuf> {
     env::var_os("HOME")
         .map(PathBuf::from)
@@ -148,5 +211,14 @@ mod tests {
             ..Config::default()
         };
         assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn trigger_choice_labels_match_supported_keys() {
+        for (value, _) in TRIGGER_KEY_CHOICES {
+            assert!(parse_trigger_key(value).is_ok());
+        }
+        assert_eq!(trigger_key_label("Control_R"), "右 Ctrl");
+        assert_eq!(trigger_key_label("0xffc5"), "0xffc5");
     }
 }

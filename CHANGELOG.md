@@ -14,7 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and XKB keysym triggers.
 - ALSA/cpal microphone capture, 16 kHz mono PCM processing, Opus encoding, and Doubao IME ASR.
 - IBus preedit updates and direct `CommitText` output to the focused application.
-- Native GTK4 settings for the trigger key, recording mode, microphone, and recording limit.
+- Native IBus property menus for changing the trigger key and recording mode without a GUI toolkit.
 - JSON configuration with Debian package and user-level installation support.
 - ASR handshake and real-audio diagnostics with `x-tt-logid` logging.
 - Automatic credential recovery and buffered audio replay after `service discovery failure`.

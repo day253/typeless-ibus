@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::ConfigStore;
 use crate::engine::VoiceEngine;
 use anyhow::{Context, Result, bail};
 use std::env;
@@ -14,7 +14,7 @@ pub const COMPONENT_NAME: &str = "org.freedesktop.IBus.Typeless";
 pub const ENGINE_NAME: &str = "typeless";
 const FACTORY_PATH: &str = "/org/freedesktop/IBus/Factory";
 
-pub async fn serve(config: Config, credentials_path: PathBuf) -> Result<Connection> {
+pub async fn serve(config: ConfigStore, credentials_path: PathBuf) -> Result<Connection> {
     let address = ibus_address()?;
     let connection = Builder::address(address.as_str())
         .context("解析 IBus D-Bus 地址失败")?
@@ -75,13 +75,13 @@ pub fn ibus_address() -> Result<String> {
 
 struct EngineFactory {
     connection: Connection,
-    config: Config,
+    config: ConfigStore,
     credentials_path: PathBuf,
     next_engine_id: AtomicU64,
 }
 
 impl EngineFactory {
-    fn new(connection: Connection, config: Config, credentials_path: PathBuf) -> Self {
+    fn new(connection: Connection, config: ConfigStore, credentials_path: PathBuf) -> Self {
         Self {
             connection,
             config,
@@ -102,6 +102,10 @@ impl EngineFactory {
         let path_string = format!("/org/freedesktop/IBus/Engine/Typeless/{id}");
         let path = OwnedObjectPath::try_from(path_string.clone())
             .map_err(|error| fdo::Error::Failed(error.to_string()))?;
+
+        if let Err(error) = self.config.reload() {
+            tracing::warn!(%error, "failed to reload configuration; keeping last valid values");
+        }
 
         self.connection
             .object_server()
@@ -141,7 +145,7 @@ mod tests {
         assert!(xml.contains(&format!("<name>{COMPONENT_NAME}</name>")));
         assert!(xml.contains(&format!("<name>{ENGINE_NAME}</name>")));
         assert!(xml.contains("/usr/libexec/typeless-ibus-engine"));
-        assert!(xml.contains("<setup>/usr/libexec/typeless-ibus-settings</setup>"));
+        assert!(!xml.contains("<setup>"));
         assert!(!xml.contains("<icon>"));
     }
 }
