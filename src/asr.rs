@@ -1,17 +1,17 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use futures_util::{SinkExt, StreamExt};
 use http::header::{HeaderValue, USER_AGENT as USER_AGENT_HEADER};
 use opus::{Application, Channels, Encoder};
 use prost::Message as ProstMessage;
 use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use uuid::Uuid;
 
 const REGISTER_URL: &str = "https://log.snssdk.com/service/2/device_register/";
@@ -347,12 +347,11 @@ fn parse_transcript(response: &AsrResponse) -> Result<Option<AsrEvent>> {
 }
 
 async fn ensure_credentials(client: &reqwest::Client, path: &Path) -> Result<DeviceCredentials> {
-    if let Ok(content) = tokio::fs::read_to_string(path).await {
-        if let Ok(credentials) = serde_json::from_str::<DeviceCredentials>(&content) {
-            if !credentials.token.is_empty() {
-                return Ok(credentials);
-            }
-        }
+    if let Ok(content) = tokio::fs::read_to_string(path).await
+        && let Ok(credentials) = serde_json::from_str::<DeviceCredentials>(&content)
+        && !credentials.token.is_empty()
+    {
+        return Ok(credentials);
     }
 
     let mut credentials = register_device(client).await?;
