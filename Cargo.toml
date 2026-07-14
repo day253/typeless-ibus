@@ -1,0 +1,53 @@
+[package]
+name = "typeless-ibus"
+version = "0.3.0"
+description = "Native IBus voice input engine for Linux"
+authors = ["day253 <9634619+day253@users.noreply.github.com>"]
+license = "MIT"
+edition = "2024"
+repository = "https://github.com/day253/typeless"
+readme = "README.md"
+
+[[bin]]
+name = "typeless-ibus-engine"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+cpal = "0.15.3"
+futures-util = "0.3"
+http = "1"
+md5 = "0.8"
+opus = "0.3.1"
+prost = "0.14.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread", "signal", "sync", "time"] }
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-native-roots"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1.23.4", features = ["v4"] }
+xkeysym = "0.2.1"
+zbus = { version = "5.13.2", default-features = false, features = ["tokio"] }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+opt-level = "s"
+strip = true
+
+[package.metadata.deb]
+name = "typeless-ibus"
+section = "utils"
+priority = "optional"
+depends = "$auto, ibus (>= 1.5.29)"
+maintainer-scripts = "packaging"
+assets = [
+  ["target/release/typeless-ibus-engine", "usr/libexec/typeless-ibus-engine", "755"],
+  ["data/typeless.xml", "usr/share/ibus/component/typeless.xml", "644"],
+  ["data/typeless.png", "usr/share/icons/hicolor/128x128/apps/typeless.png", "644"],
+  ["data/config.example.json", "usr/share/doc/typeless-ibus/config.example.json", "644"],
+  ["README.md", "usr/share/doc/typeless-ibus/README.md", "644"],
+  ["THIRD_PARTY.md", "usr/share/doc/typeless-ibus/THIRD_PARTY.md", "644"],
+]

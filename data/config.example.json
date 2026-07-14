@@ -1,0 +1,6 @@
+{
+  "triggerKey": "XF86_Fn",
+  "triggerMode": "hold",
+  "inputDevice": null,
+  "maxRecordingSeconds": 120
+}

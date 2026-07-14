@@ -1,139 +1,133 @@
-# Typeless ASR
+# Typeless IBus
 
-一个面向 macOS 和 Linux 的轻量语音输入桌面应用。按一次快捷键开始说话，再按一次结束；
-识别结果会直接粘贴到当前应用，或在受限制的平台上复制到剪贴板。
+一个面向 Ubuntu / Linux 的原生 IBus 语音输入法。它直接通过 IBus 的预编辑与提交接口向
+当前输入框写入文字，因此可以在 GNOME Wayland 下工作，不依赖剪贴板、模拟粘贴或 X11。
 
-当前版本使用 **Tauri 2 + Rust + React/TypeScript**。运行时不需要 Python，也不包含 LLM、
-文字润色、账户或云额度系统。
+当前版本只包含 Rust 引擎，不使用 Python，也没有引入 LLM、文字润色、账号或云额度系统。
+语音识别协议参考
+[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr)，桌面产品思路参考
+[`tover0314-w/opentypeless`](https://github.com/tover0314-w/opentypeless)。
 
-## 当前能力
+## 使用方式
 
-- Rust `cpal` 实时采集麦克风，统一转换为 16 kHz 单声道 PCM
-- Rust 实现豆包输入法 ASR WebSocket 客户端、Protobuf 消息和 Opus 编码
-- Tauri 系统托盘、全局快捷键和无焦点录音胶囊
-- React/TypeScript 设置界面与实时中间识别结果
-- macOS / Linux X11 自动粘贴，并在安全时恢复原剪贴板文字
-- Linux Wayland 自动降级到托盘控制和剪贴板输出
-- 可配置快捷键和麦克风设备
-- 凭据和设置只保存在本机 Tauri 应用数据目录
+1. 在 Ubuntu“设置 → 键盘 → 输入源”中添加 `Typeless Voice`。
+2. 切换到 `Typeless Voice` 输入源并把光标放进任意输入框。
+3. 长按 `Fn` 开始录音，说完后松开 `Fn`。
+4. 识别中的文字显示为预编辑文本，最终结果由 IBus 直接提交。
 
-Windows 暂不支持。
+`Esc` 可以取消当前录音或识别。单次录音默认最多 120 秒。
 
-## 技术架构
+> 部分笔记本的 Fn 键由固件处理，不会向 Linux 上报 `XF86_Fn`。此时把触发键改成
+> `Control_R` 或 `F8` 即可；这不是 Wayland 限制。
 
-项目参考了 [OpenTypeless](https://github.com/tover0314-w/opentypeless) 的 Tauri 桌面分层，
-但只保留语音输入所需的最小链路：
+## 安装
 
-```text
-React + TypeScript
-设置 · 状态 · 中间识别结果
-          │ Tauri commands / events
-          ▼
-Rust desktop core
-全局快捷键 · 托盘 · cpal 录音 · Opus · 豆包 ASR · 剪贴板/粘贴
-```
-
-核心目录：
-
-```text
-src/                         # React / TypeScript 前端
-src-tauri/src/audio.rs       # 麦克风采集、混音和重采样
-src-tauri/src/asr.rs         # 豆包设备注册、Token、Protobuf、WebSocket、Opus
-src-tauri/src/output.rs      # 剪贴板、自动粘贴和 Wayland 降级
-src-tauri/src/config.rs      # 本地设置
-src-tauri/src/lib.rs         # Tauri 命令、事件、快捷键、托盘和流水线
-```
-
-## 安装依赖
-
-需要：
-
-- Node.js 22+
-- Rust stable
-- Opus
-- macOS 或 Linux 桌面环境
-
-### macOS
-
-```bash
-brew install node rust opus pkg-config
-git clone https://github.com/day253/typeless.git
-cd typeless
-npm install
-npm run tauri dev
-```
-
-第一次录音时，在“系统设置 → 隐私与安全性”中为 Typeless ASR 开启：
-
-1. 麦克风
-2. 辅助功能（全局快捷键和自动粘贴需要）
-
-构建 `.app` 和 `.dmg`：
-
-```bash
-npm run tauri build
-```
-
-### Ubuntu / Debian
+系统要求：Ubuntu/Debian、IBus 1.5.29+、Rust stable、ALSA 和 Opus 开发库。
 
 ```bash
 sudo apt update
-sudo apt install -y \
-  build-essential curl wget file pkg-config libopus-dev libasound2-dev \
-  libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev
+sudo apt install -y build-essential pkg-config libasound2-dev libopus-dev ibus
 
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 git clone https://github.com/day253/typeless.git
 cd typeless
-npm install
-npm run tauri dev
+cargo build --release --locked
+cargo install cargo-deb --version 3.7.0 --locked
+cargo deb --no-build
+sudo apt install ./target/debian/typeless-ibus_0.3.0-1_amd64.deb
 ```
 
-构建 AppImage 和 `.deb`：
+安装完成后注销并重新登录，或重启 IBus，再从 GNOME 设置添加输入源。
+
+没有 sudo 权限时可安装到当前用户：
 
 ```bash
-npm run tauri build
+cargo build --release --locked
+./packaging/install-user.sh
 ```
 
-## 使用
+用户级安装脚本会把引擎和组件放到 `~/.local`，并为 GNOME 的用户级 IBus 服务加入组件
+搜索路径。它不会改动现有输入源列表；安装后仍需在 GNOME 设置中添加
+`Typeless Voice`。卸载使用 `./packaging/uninstall-user.sh`。
 
-1. 启动 Typeless ASR。
-2. 把光标放到任意应用的输入框。
-3. 按 `Ctrl+Shift+Space` 开始录音。
-4. 说完后再次按相同快捷键。
-5. 识别结果会自动输入；不能模拟粘贴时会保留在剪贴板。
+## 配置
 
-关闭主窗口只会隐藏到系统托盘，选择托盘菜单中的“退出”才会完全结束。
+首次运行会创建：
 
-### Wayland
+```text
+~/.config/typeless-ibus/config.json
+```
 
-Wayland 默认禁止普通应用监听系统级按键和模拟键盘输入。本项目不会绕过该安全模型：
+默认配置：
 
-- 使用托盘菜单“开始 / 结束录音”控制录音
-- 识别结果复制到剪贴板
-- 手动按 `Ctrl+V` 完成输入
+```json
+{
+  "triggerKey": "XF86_Fn",
+  "triggerMode": "hold",
+  "inputDevice": null,
+  "maxRecordingSeconds": 120
+}
+```
 
-X11 下会正常注册全局快捷键并自动粘贴。
+- `triggerKey`：支持 `XF86_Fn`、`Control_R`、`Control_L`、`F8`、`F9`、`F10`、
+  `Space` 或 `0x` 开头的十六进制 XKB keysym。
+- `triggerMode`：`hold` 表示按下开始、松开结束；`toggle` 表示按一次开始、再按一次结束。
+- `inputDevice`：`null` 使用默认麦克风，也可填写设备名称。
+- `maxRecordingSeconds`：1 到 600 秒。
+
+修改配置后重启 IBus，配置会在新引擎进程中生效。可用以下命令检查：
+
+```bash
+typeless-ibus-engine --config-path
+typeless-ibus-engine --print-config
+typeless-ibus-engine --list-devices
+typeless-ibus-engine --check
+```
+
+系统包中的可执行文件位于 `/usr/libexec/typeless-ibus-engine`；用户安装版本位于
+`~/.local/libexec/typeless-ibus-engine`。
+
+## 架构
+
+```text
+物理按键 → IBus ProcessKeyEvent
+                  │
+          按下触发键 / 松开触发键
+                  │
+        ALSA + cpal → 16 kHz PCM → Opus
+                  │
+              豆包 IME ASR
+                  │
+        IBus preedit / CommitText → 当前输入框
+```
+
+主要文件：
+
+```text
+src/ibus.rs       IBus D-Bus 组件、Factory 与引擎注册
+src/engine.rs     长按/切换触发、录音会话和 IBus 文本提交
+src/audio.rs      麦克风采集、单声道混音与重采样
+src/asr.rs        设备注册、Token、Protobuf、WebSocket 与 Opus
+src/config.rs     JSON 配置、按键解析与本地路径
+```
 
 ## 开发与验证
 
 ```bash
-npm install
-npm run build
-
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
-cargo test --manifest-path src-tauri/Cargo.toml
+cargo fmt --all -- --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+cargo build --release --locked
 ```
 
-GitHub CI 会在 macOS 14 和 Ubuntu 24.04 上验证 TypeScript 构建、Rust 格式、Clippy 和测试。
+GitHub Actions 会在 Ubuntu 24.04 上运行格式、Clippy、测试、发布构建和 `.deb` 打包。
 
-## 数据与风险说明
+## 数据与风险
 
 - 音频直接发送到豆包输入法相关服务，不经过本项目自己的服务器。
-- ASR 是根据非官方客户端所展示协议实现的互操作客户端，协议可能变化或随时不可用。
-- 首次使用会注册虚拟设备，并将设备标识与 Token 保存到本机应用数据目录。
-- 本项目没有复制或打包 `doubaoime-asr` 的 Python 源码，也不依赖 Python 运行时。
+- 首次使用会注册虚拟设备，并把设备标识与 Token 保存到
+  `~/.local/share/typeless-ibus/credentials.json`，权限为 `0600`。
+- 这是基于非官方协议信息实现的互操作客户端，协议可能变化或停止可用。
+- 本项目不复制、不打包也不执行 `doubaoime-asr` 的 Python 源码。
 - 使用前请自行确认适用的服务条款、隐私要求和所在地区法规。
 
 请阅读 [第三方说明](THIRD_PARTY.md)。本项目自身代码采用 [MIT License](LICENSE)。
