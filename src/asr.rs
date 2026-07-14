@@ -7,8 +7,9 @@ use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
+use tokio::time::timeout;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -86,6 +87,117 @@ struct DeviceCredentials {
     token: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum HandshakeOutcome {
+    Ready,
+    Rejected {
+        stage: &'static str,
+        message_type: String,
+        status_code: i32,
+        service_name: String,
+        status_message: String,
+    },
+}
+
+impl HandshakeOutcome {
+    fn is_ready(&self) -> bool {
+        matches!(self, Self::Ready)
+    }
+
+    fn is_service_discovery_failure(&self) -> bool {
+        matches!(
+            self,
+            Self::Rejected {
+                status_code: 50_700_000,
+                status_message,
+                ..
+            } if status_message.eq_ignore_ascii_case("service discovery failure")
+        )
+    }
+}
+
+pub async fn diagnose_service(credentials_path: &Path) -> Result<()> {
+    let client = reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .build()
+        .context("创建网络客户端失败")?;
+    let content = tokio::fs::read_to_string(credentials_path)
+        .await
+        .with_context(|| format!("读取 ASR 凭据失败：{}", credentials_path.display()))?;
+    let credentials: DeviceCredentials =
+        serde_json::from_str(&content).context("解析 ASR 凭据失败")?;
+    if credentials.device_id.is_empty()
+        || credentials.cdid.is_empty()
+        || credentials.token.is_empty()
+    {
+        bail!("ASR 凭据不完整，缺少 device_id、cdid 或 token");
+    }
+
+    println!("asr.credentials: loaded (secrets redacted)");
+    let refreshed_token = get_asr_token(&client, &credentials.device_id, &credentials.cdid).await?;
+    println!(
+        "asr.settings: ok (cached_token_current={})",
+        refreshed_token == credentials.token
+    );
+
+    let cached = probe_handshake(&credentials).await?;
+    print_handshake("cached", &cached);
+    if cached.is_ready() {
+        println!("asr.diagnosis: cached credentials and ASR protocol are working");
+        return Ok(());
+    }
+
+    let mut refreshed_credentials = credentials.clone();
+    refreshed_credentials.token = refreshed_token;
+    let token_changed = refreshed_credentials.token != credentials.token;
+    let refreshed = probe_handshake(&refreshed_credentials).await?;
+    if token_changed {
+        print_handshake("refreshed", &refreshed);
+    } else {
+        print_handshake("retry", &refreshed);
+    }
+    if refreshed.is_ready() {
+        if token_changed {
+            println!(
+                "asr.diagnosis: cached token is stale; the current device identity still works"
+            );
+        } else {
+            println!(
+                "asr.diagnosis: the first ASR handshake failed transiently; unchanged credentials work on retry"
+            );
+        }
+        return Ok(());
+    }
+
+    println!("asr.fresh_device: registering an in-memory diagnostic identity");
+    let mut fresh_credentials = register_device(&client).await?;
+    fresh_credentials.token = get_asr_token(
+        &client,
+        &fresh_credentials.device_id,
+        &fresh_credentials.cdid,
+    )
+    .await?;
+    let fresh = probe_handshake(&fresh_credentials).await?;
+    print_handshake("fresh_device", &fresh);
+    if fresh.is_ready() {
+        if cached.is_service_discovery_failure() || refreshed.is_service_discovery_failure() {
+            println!(
+                "asr.diagnosis: cached device identity is rejected by service discovery; a newly registered identity works"
+            );
+        } else {
+            println!(
+                "asr.diagnosis: cached credentials are rejected; a newly registered identity works"
+            );
+        }
+        println!("asr.credentials: unchanged (fresh diagnostic identity was not saved)");
+        return Ok(());
+    }
+
+    bail!(
+        "新设备身份仍无法完成 ASR 握手；问题位于上游服务、接口协议或当前网络，而非本地 IBus/音频集成"
+    )
+}
+
 pub async fn transcribe_realtime<F>(
     mut audio_rx: mpsc::Receiver<Vec<u8>>,
     credentials_path: &Path,
@@ -126,24 +238,7 @@ where
     .await?;
     expect_message(&mut socket, "TaskStarted").await?;
 
-    let session_payload = json!({
-        "audio_info": {
-            "channel": 1,
-            "format": "speech_opus",
-            "sample_rate": SAMPLE_RATE
-        },
-        "enable_punctuation": true,
-        "enable_speech_rejection": false,
-        "extra": {
-            "app_name": "com.android.chrome",
-            "cell_compress_rate": 8,
-            "did": credentials.device_id,
-            "enable_asr_threepass": true,
-            "enable_asr_twopass": true,
-            "input_mode": "tool"
-        }
-    })
-    .to_string();
+    let session_payload = session_payload(&credentials.device_id);
     let mut start_session = request_message(&request_id, &credentials.token, "StartSession");
     start_session.payload = session_payload;
     send_request(&mut socket, start_session).await?;
@@ -211,6 +306,140 @@ where
     }
 
     Ok(final_text)
+}
+
+fn session_payload(device_id: &str) -> String {
+    json!({
+        "audio_info": {
+            "channel": 1,
+            "format": "speech_opus",
+            "sample_rate": SAMPLE_RATE
+        },
+        "enable_punctuation": true,
+        "enable_speech_rejection": false,
+        "extra": {
+            "app_name": "com.android.chrome",
+            "cell_compress_rate": 8,
+            "did": device_id,
+            "enable_asr_threepass": true,
+            "enable_asr_twopass": true,
+            "input_mode": "tool"
+        }
+    })
+    .to_string()
+}
+
+async fn probe_handshake(credentials: &DeviceCredentials) -> Result<HandshakeOutcome> {
+    let url = format!(
+        "{WEBSOCKET_URL}?aid={AID}&device_id={}",
+        credentials.device_id
+    );
+    let mut request = url
+        .into_client_request()
+        .context("创建 ASR 诊断 WebSocket 请求失败")?;
+    request
+        .headers_mut()
+        .insert(USER_AGENT_HEADER, HeaderValue::from_static(USER_AGENT));
+    request
+        .headers_mut()
+        .insert("proto-version", HeaderValue::from_static("v2"));
+    request
+        .headers_mut()
+        .insert("x-custom-keepalive", HeaderValue::from_static("true"));
+
+    let (mut socket, _) = timeout(Duration::from_secs(15), connect_async(request))
+        .await
+        .context("连接豆包 ASR 诊断超时")?
+        .context("连接豆包 ASR 诊断失败")?;
+    let request_id = Uuid::new_v4().to_string();
+    send_request(
+        &mut socket,
+        request_message(&request_id, &credentials.token, "StartTask"),
+    )
+    .await?;
+    let task_response = receive_probe_response(&mut socket).await?;
+    if task_response.message_type != "TaskStarted" {
+        let _ = socket.send(WsMessage::Close(None)).await;
+        return Ok(rejected_outcome("StartTask", task_response));
+    }
+
+    let mut start_session = request_message(&request_id, &credentials.token, "StartSession");
+    start_session.payload = session_payload(&credentials.device_id);
+    send_request(&mut socket, start_session).await?;
+    let session_response = receive_probe_response(&mut socket).await?;
+    let outcome = if session_response.message_type == "SessionStarted" {
+        let _ = send_request(
+            &mut socket,
+            request_message(&request_id, &credentials.token, "FinishSession"),
+        )
+        .await;
+        let _ = timeout(Duration::from_secs(5), async {
+            loop {
+                let response = receive_probe_response(&mut socket).await?;
+                if response.message_type == "SessionFinished" {
+                    return Ok::<(), anyhow::Error>(());
+                }
+            }
+        })
+        .await;
+        HandshakeOutcome::Ready
+    } else {
+        rejected_outcome("StartSession", session_response)
+    };
+    let _ = socket.send(WsMessage::Close(None)).await;
+    Ok(outcome)
+}
+
+async fn receive_probe_response<S>(socket: &mut S) -> Result<AsrResponse>
+where
+    S: StreamExt<Item = Result<WsMessage, tokio_tungstenite::tungstenite::Error>> + Unpin,
+{
+    timeout(Duration::from_secs(15), async {
+        loop {
+            let message = socket
+                .next()
+                .await
+                .ok_or_else(|| anyhow!("豆包 ASR 诊断连接已关闭"))?
+                .context("读取豆包 ASR 诊断响应失败")?;
+            match message {
+                WsMessage::Binary(bytes) => {
+                    return AsrResponse::decode(bytes.as_slice()).context("解析 ASR 诊断响应失败");
+                }
+                WsMessage::Close(frame) => bail!("豆包 ASR 诊断关闭连接：{frame:?}"),
+                WsMessage::Ping(_)
+                | WsMessage::Pong(_)
+                | WsMessage::Text(_)
+                | WsMessage::Frame(_) => {}
+            }
+        }
+    })
+    .await
+    .context("等待豆包 ASR 诊断响应超时")?
+}
+
+fn rejected_outcome(stage: &'static str, response: AsrResponse) -> HandshakeOutcome {
+    HandshakeOutcome::Rejected {
+        stage,
+        message_type: response.message_type,
+        status_code: response.status_code,
+        service_name: response.service_name,
+        status_message: response.status_message,
+    }
+}
+
+fn print_handshake(label: &str, outcome: &HandshakeOutcome) {
+    match outcome {
+        HandshakeOutcome::Ready => println!("asr.{label}: ready (StartTask + StartSession)"),
+        HandshakeOutcome::Rejected {
+            stage,
+            message_type,
+            status_code,
+            service_name,
+            status_message,
+        } => println!(
+            "asr.{label}: rejected stage={stage} type={message_type} code={status_code} service={service_name:?} message={status_message:?}"
+        ),
+    }
 }
 
 async fn decode_socket_message(
@@ -566,5 +795,33 @@ mod tests {
         assert_eq!(decoded.token, "token");
         assert_eq!(decoded.method_name, "StartTask");
         assert_eq!(decoded.request_id, "request");
+    }
+
+    #[test]
+    fn classifies_service_discovery_failure_without_credentials() {
+        let outcome = rejected_outcome(
+            "StartSession",
+            AsrResponse {
+                service_name: "ASR".to_string(),
+                message_type: "SessionFailed".to_string(),
+                status_code: 50_700_000,
+                status_message: "service discovery failure".to_string(),
+                ..Default::default()
+            },
+        );
+
+        assert!(!outcome.is_ready());
+        assert!(outcome.is_service_discovery_failure());
+        let debug = format!("{outcome:?}");
+        assert!(!debug.contains("token"));
+        assert!(!debug.contains("device_id"));
+    }
+
+    #[test]
+    fn session_payload_uses_the_probed_device_identity() {
+        let payload: Value = serde_json::from_str(&session_payload("device-under-test")).unwrap();
+        assert_eq!(payload["extra"]["did"], "device-under-test");
+        assert_eq!(payload["audio_info"]["format"], "speech_opus");
+        assert_eq!(payload["audio_info"]["sample_rate"], SAMPLE_RATE);
     }
 }
