@@ -7,6 +7,7 @@ use prost::Message as ProstMessage;
 use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::fmt;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
@@ -108,16 +109,36 @@ impl HandshakeOutcome {
     }
 
     fn is_service_discovery_failure(&self) -> bool {
-        matches!(
-            self,
+        match self {
             Self::Rejected {
-                status_code: 50_700_000,
+                status_code,
                 status_message,
                 ..
-            } if status_message.eq_ignore_ascii_case("service discovery failure")
+            } => is_service_discovery_status(*status_code, status_message),
+            Self::Ready => false,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct AsrServiceError {
+    message_type: String,
+    status_code: i32,
+    service_name: String,
+    status_message: String,
+}
+
+impl fmt::Display for AsrServiceError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "豆包 ASR 返回错误：type={} code={} service={} message={}",
+            self.message_type, self.status_code, self.service_name, self.status_message
         )
     }
 }
+
+impl std::error::Error for AsrServiceError {}
 
 pub async fn diagnose_service(credentials_path: &Path) -> Result<()> {
     let client = reqwest::Client::builder()
@@ -214,6 +235,64 @@ where
         .build()
         .context("创建网络客户端失败")?;
     let credentials = ensure_credentials(&client, credentials_path).await?;
+    let mut buffered_audio = Vec::new();
+    let mut source_finished = false;
+    let first_attempt = transcribe_attempt(
+        &mut audio_rx,
+        &credentials,
+        &mut buffered_audio,
+        &mut source_finished,
+        false,
+        &mut on_event,
+    )
+    .await;
+
+    match first_attempt {
+        Ok(text) => Ok(text),
+        Err(error) if is_service_discovery_error(&error) => {
+            tracing::warn!(
+                error = %format_args!("{error:#}"),
+                buffered_frames = buffered_audio.len(),
+                "ASR service discovery failed; registering replacement credentials"
+            );
+            let replacement = acquire_fresh_credentials(&client)
+                .await
+                .context("重新获取 ASR 凭据失败")?;
+            let text = transcribe_attempt(
+                &mut audio_rx,
+                &replacement,
+                &mut buffered_audio,
+                &mut source_finished,
+                true,
+                &mut on_event,
+            )
+            .await
+            .context("使用新 ASR 凭据重试失败")?;
+
+            match save_credentials(credentials_path, &replacement).await {
+                Ok(()) => tracing::info!("replaced ASR credentials after successful retry"),
+                Err(save_error) => tracing::error!(
+                    error = %format_args!("{save_error:#}"),
+                    "ASR retry succeeded but replacement credentials could not be saved"
+                ),
+            }
+            Ok(text)
+        }
+        Err(error) => Err(error),
+    }
+}
+
+async fn transcribe_attempt<F>(
+    audio_rx: &mut mpsc::Receiver<Vec<u8>>,
+    credentials: &DeviceCredentials,
+    buffered_audio: &mut Vec<Vec<u8>>,
+    source_finished: &mut bool,
+    replay_buffer: bool,
+    on_event: &mut F,
+) -> Result<String>
+where
+    F: FnMut(AsrEvent),
+{
     let url = format!(
         "{WEBSOCKET_URL}?aid={AID}&device_id={}",
         credentials.device_id
@@ -261,37 +340,63 @@ where
         let mut final_text = String::new();
         let mut finishing = false;
 
+        if replay_buffer {
+            for pcm in buffered_audio.iter() {
+                send_pcm_frame(
+                    &mut socket,
+                    &mut encoder,
+                    &request_id,
+                    pcm,
+                    frame_index,
+                    started_at,
+                )
+                .await?;
+                frame_index += 1;
+            }
+            tracing::info!(
+                replayed_frames = frame_index,
+                "replayed buffered audio with replacement credentials"
+            );
+        }
+
+        if *source_finished {
+            finish_audio_session(
+                &mut socket,
+                &mut encoder,
+                &request_id,
+                &credentials.token,
+                frame_index,
+                started_at,
+            )
+            .await?;
+            finishing = true;
+        }
+
         loop {
             tokio::select! {
                 audio = audio_rx.recv(), if !finishing => {
                     match audio {
                         Some(pcm) => {
-                            let frame_state = if frame_index == 0 { FrameState::First } else { FrameState::Middle };
-                            let encoded = encode_pcm(&mut encoder, &pcm)?;
-                            let message = audio_message(
+                            buffered_audio.push(pcm.clone());
+                            send_pcm_frame(
+                                &mut socket,
+                                &mut encoder,
                                 &request_id,
-                                encoded,
-                                frame_state,
-                                started_at + frame_index * FRAME_DURATION_MS,
-                            );
-                            send_request(&mut socket, message).await?;
+                                &pcm,
+                                frame_index,
+                                started_at,
+                            ).await?;
                             frame_index += 1;
                         }
                         None => {
-                            if frame_index > 0 {
-                                let silence = vec![0_u8; 640];
-                                let encoded = encode_pcm(&mut encoder, &silence)?;
-                                let message = audio_message(
-                                    &request_id,
-                                    encoded,
-                                    FrameState::Last,
-                                    started_at + frame_index * FRAME_DURATION_MS,
-                                );
-                                send_request(&mut socket, message).await?;
-                            }
-                            send_request(
+                            *source_finished = true;
+                            finish_audio_session(
                                 &mut socket,
-                                request_message(&request_id, &credentials.token, "FinishSession"),
+                                &mut encoder,
+                                &request_id,
+                                &credentials.token,
+                                frame_index,
+                                started_at,
                             ).await?;
                             finishing = true;
                         }
@@ -300,13 +405,7 @@ where
                 incoming = socket.next() => {
                     let response = decode_socket_message(incoming).await?;
                     if matches!(response.message_type.as_str(), "TaskFailed" | "SessionFailed") {
-                        bail!(
-                            "豆包 ASR 返回错误：type={} code={} service={} message={}",
-                            response.message_type,
-                            response.status_code,
-                            response.service_name,
-                            response.status_message
-                        );
+                        return Err(asr_response_error(&response));
                     }
                     if response.message_type == "SessionFinished" {
                         break;
@@ -333,6 +432,63 @@ where
         );
     }
     result
+}
+
+async fn send_pcm_frame<S>(
+    socket: &mut S,
+    encoder: &mut Encoder,
+    request_id: &str,
+    pcm: &[u8],
+    frame_index: u64,
+    started_at: u64,
+) -> Result<()>
+where
+    S: SinkExt<WsMessage, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    let frame_state = if frame_index == 0 {
+        FrameState::First
+    } else {
+        FrameState::Middle
+    };
+    let encoded = encode_pcm(encoder, pcm)?;
+    send_request(
+        socket,
+        audio_message(
+            request_id,
+            encoded,
+            frame_state,
+            started_at + frame_index * FRAME_DURATION_MS,
+        ),
+    )
+    .await
+}
+
+async fn finish_audio_session<S>(
+    socket: &mut S,
+    encoder: &mut Encoder,
+    request_id: &str,
+    token: &str,
+    frame_index: u64,
+    started_at: u64,
+) -> Result<()>
+where
+    S: SinkExt<WsMessage, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    if frame_index > 0 {
+        let silence = vec![0_u8; PCM_FRAME_BYTES];
+        let encoded = encode_pcm(encoder, &silence)?;
+        send_request(
+            socket,
+            audio_message(
+                request_id,
+                encoded,
+                FrameState::Last,
+                started_at + frame_index * FRAME_DURATION_MS,
+            ),
+        )
+        .await?;
+    }
+    send_request(socket, request_message(request_id, token, "FinishSession")).await
 }
 
 pub async fn check_audio_fixture(audio_path: &Path, credentials_path: &Path) -> Result<String> {
@@ -548,6 +704,36 @@ fn print_handshake(label: &str, outcome: &HandshakeOutcome) {
     }
 }
 
+fn is_service_discovery_status(status_code: i32, status_message: &str) -> bool {
+    status_code == 50_700_000
+        || status_message
+            .to_ascii_lowercase()
+            .contains("service discovery failure")
+}
+
+fn asr_response_error(response: &AsrResponse) -> anyhow::Error {
+    AsrServiceError {
+        message_type: response.message_type.clone(),
+        status_code: response.status_code,
+        service_name: response.service_name.clone(),
+        status_message: response.status_message.clone(),
+    }
+    .into()
+}
+
+fn is_service_discovery_error(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        cause
+            .downcast_ref::<AsrServiceError>()
+            .is_some_and(|service_error| {
+                is_service_discovery_status(
+                    service_error.status_code,
+                    &service_error.status_message,
+                )
+            })
+    })
+}
+
 async fn decode_socket_message(
     incoming: Option<Result<WsMessage, tokio_tungstenite::tungstenite::Error>>,
 ) -> Result<AsrResponse> {
@@ -572,13 +758,7 @@ where
         response.message_type.as_str(),
         "TaskFailed" | "SessionFailed"
     ) {
-        bail!(
-            "豆包 ASR 初始化失败：type={} code={} service={} message={}",
-            response.message_type,
-            response.status_code,
-            response.service_name,
-            response.status_message
-        );
+        return Err(asr_response_error(&response));
     }
     if response.message_type != expected {
         bail!("豆包 ASR 返回了意外消息：{}", response.message_type);
@@ -695,28 +875,53 @@ async fn ensure_credentials(client: &reqwest::Client, path: &Path) -> Result<Dev
         return Ok(credentials);
     }
 
+    let credentials = acquire_fresh_credentials(client).await?;
+    save_credentials(path, &credentials).await?;
+    Ok(credentials)
+}
+
+async fn acquire_fresh_credentials(client: &reqwest::Client) -> Result<DeviceCredentials> {
     let mut credentials = register_device(client).await?;
     credentials.token = get_asr_token(client, &credentials.device_id, &credentials.cdid).await?;
-    if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .context("创建凭据目录失败")?;
-    }
-    tokio::fs::write(
-        path,
-        format!("{}\n", serde_json::to_string_pretty(&credentials)?),
-    )
-    .await
-    .context("保存 ASR 凭据失败")?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        tokio::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
-            .await
-            .context("设置 ASR 凭据权限失败")?;
-    }
     Ok(credentials)
+}
+
+async fn save_credentials(path: &Path, credentials: &DeviceCredentials) -> Result<()> {
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    tokio::fs::create_dir_all(parent)
+        .await
+        .context("创建凭据目录失败")?;
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("credentials.json");
+    let temporary_path = parent.join(format!(".{file_name}.{}.tmp", Uuid::new_v4()));
+    let content = format!("{}\n", serde_json::to_string_pretty(credentials)?);
+
+    let result: Result<()> = async {
+        tokio::fs::write(&temporary_path, content)
+            .await
+            .context("写入临时 ASR 凭据失败")?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            tokio::fs::set_permissions(&temporary_path, std::fs::Permissions::from_mode(0o600))
+                .await
+                .context("设置临时 ASR 凭据权限失败")?;
+        }
+
+        tokio::fs::rename(&temporary_path, path)
+            .await
+            .context("原子替换 ASR 凭据失败")?;
+        Ok(())
+    }
+    .await;
+
+    if result.is_err() {
+        let _ = tokio::fs::remove_file(&temporary_path).await;
+    }
+    result
 }
 
 async fn register_device(client: &reqwest::Client) -> Result<DeviceCredentials> {
@@ -929,6 +1134,78 @@ mod tests {
         assert!(!debug.contains("token"));
         assert!(!debug.contains("device_id"));
         assert!(debug.contains("test-logid"));
+    }
+
+    #[test]
+    fn classifies_backend_service_discovery_errors_for_recovery() {
+        let by_code = asr_response_error(&AsrResponse {
+            message_type: "SessionFailed".to_string(),
+            status_code: 50_700_000,
+            service_name: "ws".to_string(),
+            status_message: "backend unavailable".to_string(),
+            ..Default::default()
+        });
+        assert!(is_service_discovery_error(&by_code));
+        assert!(by_code.to_string().contains("code=50700000"));
+
+        let by_message = asr_response_error(&AsrResponse {
+            message_type: "SessionFailed".to_string(),
+            status_code: 2,
+            service_name: "ws".to_string(),
+            status_message: "read backend response: service discovery failure".to_string(),
+            ..Default::default()
+        });
+        assert!(is_service_discovery_error(&by_message));
+
+        let unrelated = asr_response_error(&AsrResponse {
+            message_type: "SessionFailed".to_string(),
+            status_code: 40_200_011,
+            service_name: "ws".to_string(),
+            status_message: "concurrent request limit".to_string(),
+            ..Default::default()
+        });
+        assert!(!is_service_discovery_error(&unrelated));
+    }
+
+    #[tokio::test]
+    async fn saves_replacement_credentials_atomically() {
+        let directory = std::env::temp_dir().join(format!("typeless-asr-{}", Uuid::new_v4()));
+        let path = directory.join("credentials.json");
+        let credentials = DeviceCredentials {
+            device_id: "device".to_string(),
+            install_id: "install".to_string(),
+            cdid: "cdid".to_string(),
+            openudid: "open".to_string(),
+            clientudid: "client".to_string(),
+            token: "token".to_string(),
+        };
+
+        save_credentials(&path, &credentials).await.unwrap();
+        let saved: DeviceCredentials =
+            serde_json::from_str(&tokio::fs::read_to_string(&path).await.unwrap()).unwrap();
+        assert_eq!(saved.device_id, credentials.device_id);
+        assert_eq!(saved.token, credentials.token);
+
+        let mut entries = tokio::fs::read_dir(&directory).await.unwrap();
+        let mut names = Vec::new();
+        while let Some(entry) = entries.next_entry().await.unwrap() {
+            names.push(entry.file_name());
+        }
+        assert_eq!(names, vec![std::ffi::OsString::from("credentials.json")]);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = tokio::fs::metadata(&path)
+                .await
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777;
+            assert_eq!(mode, 0o600);
+        }
+
+        tokio::fs::remove_dir_all(directory).await.unwrap();
     }
 
     #[test]
