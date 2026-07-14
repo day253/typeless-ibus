@@ -43,8 +43,33 @@ export NO_AT_BRIDGE=1
 export LC_ALL=C.UTF-8
 mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME"
 
-ibus_version=$(dpkg-query -W -f='${Version}' ibus)
-if dpkg --compare-versions "$ibus_version" lt 1.5.22; then
+ibus_version_output=$(ibus version)
+ibus_version=$(printf '%s\n' "$ibus_version_output" \
+  | sed -n 's/^IBus \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*$/\1/p')
+if [ -z "$ibus_version" ]; then
+  echo "Could not parse IBus version from: $ibus_version_output" >&2
+  exit 1
+fi
+version_at_least() (
+  current=$1
+  minimum=$2
+  IFS=.
+  set -- $current
+  current_major=${1:-0}
+  current_minor=${2:-0}
+  current_patch=${3:-0}
+  set -- $minimum
+  minimum_major=${1:-0}
+  minimum_minor=${2:-0}
+  minimum_patch=${3:-0}
+
+  [ "$current_major" -gt "$minimum_major" ] \
+    || { [ "$current_major" -eq "$minimum_major" ] \
+      && { [ "$current_minor" -gt "$minimum_minor" ] \
+        || { [ "$current_minor" -eq "$minimum_minor" ] \
+          && [ "$current_patch" -ge "$minimum_patch" ]; }; }; }
+)
+if ! version_at_least "$ibus_version" 1.5.22; then
   echo "IBus $ibus_version is older than the supported floor 1.5.22" >&2
   exit 1
 fi

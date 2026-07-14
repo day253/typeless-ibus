@@ -30,14 +30,35 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  ubuntu-compatibility:
-    name: Ubuntu ${{ matrix.ubuntu }} / IBus protocol / .deb
+  debian-family-compatibility:
+    name: ${{ matrix.name }} / IBus protocol / .deb
     runs-on: ubuntu-24.04
-    container: ubuntu:${{ matrix.ubuntu }}
+    container: ${{ matrix.image }}
     strategy:
       fail-fast: false
       matrix:
-        ubuntu: ["20.04", "22.04", "24.04", "26.04"]
+        include:
+          - name: Ubuntu 20.04
+            image: ubuntu:20.04
+            key: ubuntu-20.04
+          - name: Ubuntu 22.04
+            image: ubuntu:22.04
+            key: ubuntu-22.04
+          - name: Ubuntu 24.04
+            image: ubuntu:24.04
+            key: ubuntu-24.04
+          - name: Ubuntu 26.04
+            image: ubuntu:26.04
+            key: ubuntu-26.04
+          - name: Debian 11
+            image: debian:11
+            key: debian-11
+          - name: Debian 12
+            image: debian:12
+            key: debian-12
+          - name: Debian 13
+            image: debian:13
+            key: debian-13
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -61,7 +82,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.9.1
         with:
-          shared-key: ubuntu-${{ matrix.ubuntu }}
+          shared-key: ${{ matrix.key }}
       - name: Build release engine
         run: cargo build --release --locked
       - name: Exercise the IBus D-Bus protocol
@@ -79,9 +100,100 @@ jobs:
       - name: Upload distribution-native Debian package
         uses: actions/upload-artifact@v4
         with:
-          name: typeless-ibus-deb-ubuntu-${{ matrix.ubuntu }}-x86_64
+          name: typeless-ibus-deb-${{ matrix.key }}-x86_64
           path: target/debian/*.deb
           if-no-files-found: error
+
+  ibus-distribution-compatibility:
+    name: ${{ matrix.name }} / IBus protocol
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Fedora 43
+            image: fedora:43
+            family: fedora
+            key: fedora-43
+          - name: Fedora 44
+            image: fedora:44
+            family: fedora
+            key: fedora-44
+          - name: openSUSE Tumbleweed
+            image: opensuse/tumbleweed:latest
+            family: opensuse
+            key: opensuse-tumbleweed
+          - name: Arch Linux
+            image: archlinux:base-devel
+            family: arch
+            key: arch-linux
+    steps:
+      - name: Install build and IBus test dependencies
+        run: |
+          case "${{ matrix.family }}" in
+            fedora)
+              dnf install -y --setopt=install_weak_deps=False \
+                alsa-lib-devel \
+                ca-certificates \
+                curl \
+                dbus-daemon \
+                dbus-tools \
+                gcc \
+                gcc-c++ \
+                git \
+                glib2 \
+                ibus \
+                make \
+                opus-devel \
+                pkgconf-pkg-config \
+                tar \
+                zstd
+              ;;
+            opensuse)
+              zypper --non-interactive --gpg-auto-import-keys refresh
+              zypper --non-interactive install --no-recommends \
+                alsa-devel \
+                ca-certificates \
+                curl \
+                dbus-1-daemon \
+                gcc \
+                gcc-c++ \
+                git \
+                glib2-tools \
+                gzip \
+                ibus \
+                libopus-devel \
+                make \
+                pkg-config \
+                tar \
+                zstd
+              ;;
+            arch)
+              pacman -Syu --noconfirm --needed \
+                alsa-lib \
+                base-devel \
+                ca-certificates \
+                curl \
+                dbus \
+                git \
+                glib2 \
+                ibus \
+                opus \
+                pkgconf \
+                tar \
+                zstd
+              ;;
+          esac
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2.9.1
+        with:
+          shared-key: ${{ matrix.key }}
+      - name: Build release engine
+        run: cargo build --release --locked
+      - name: Exercise the IBus D-Bus protocol
+        run: dbus-run-session -- ./tests/ibus-protocol.sh target/release/typeless-ibus-engine
 
   nix:
     name: Nix / ${{ matrix.system }}

@@ -16,7 +16,7 @@ already using.
 - **Built for Wayland**: text input uses IBus D-Bus interfaces instead of keyboard or paste simulation.
 - **System-native controls**: change the trigger key and recording mode from the IBus input-source menu, with English and Chinese labels selected from the system locale.
 - **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit, Python runtime, or LLM.
-- **Broad Linux packaging**: native `.deb` builds cover Ubuntu 20.04 through 26.04, while the Nix Flake supports x86_64 and aarch64 Linux.
+- **Broad Linux support**: native `.deb` builds cover Ubuntu 20.04–26.04 and Debian 11–13; Fedora, openSUSE, and Arch Linux are protocol-tested, with Nix packages for x86_64 and aarch64.
 - **Automatic recovery**: rejected ASR service discovery credentials are refreshed while the current audio is replayed.
 
 ## How it feels
@@ -30,7 +30,7 @@ Press `Esc` to cancel the active recording or recognition session.
 
 ## Scope
 
-The current release targets Ubuntu/Linux and IBus 1.5.22 or newer. IBus remains the only input-method
+The current release targets Linux distributions with IBus 1.5.22 or newer. IBus remains the only input-method
 backend; the project does not ship separate GTK, Qt, XIM, Wayland, or Fcitx5 frontends. It also does
 not include Windows or macOS clients, LLM rewriting, accounts, cloud quotas, history, or dictionary
 features.

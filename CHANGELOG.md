@@ -18,7 +18,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Native IBus property menus for changing the trigger key and recording mode without a GUI toolkit.
 - English and Chinese IBus property labels selected automatically from the desktop locale.
 - JSON configuration with Debian package and user-level installation support.
-- IBus 1.5.22 compatibility with native Ubuntu 20.04, 22.04, 24.04, and 26.04 protocol-tested Debian builds.
+- IBus 1.5.22 compatibility with native Ubuntu 20.04–26.04 and Debian 11–13 protocol-tested `.deb` builds.
+- IBus protocol compatibility tests for Fedora 43/44, openSUSE Tumbleweed, and Arch Linux.
 - Nix Flake packages for x86_64-linux and aarch64-linux.
 - ASR handshake and real-audio diagnostics with `x-tt-logid` logging.
 - Automatic credential recovery and buffered audio replay after `service discovery failure`.
