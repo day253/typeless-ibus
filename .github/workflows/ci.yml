@@ -154,6 +154,7 @@ jobs:
               zypper --non-interactive --gpg-auto-import-keys refresh
               zypper --non-interactive install --no-recommends \
                 alsa-devel \
+                bash \
                 ca-certificates \
                 curl \
                 dbus-1-daemon \
