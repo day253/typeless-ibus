@@ -16,9 +16,9 @@ already using.
 - **Built for Wayland**: text input uses IBus D-Bus interfaces instead of keyboard or paste simulation.
 - **System-native controls**: change the trigger key and recording mode from the IBus input-source menu, with English and Chinese labels selected from the system locale.
 - **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit, Python runtime, or LLM.
-- **Broad Linux support**: native `.deb` builds cover Ubuntu 20.04–26.04 and Debian 11–13;
-  native `.rpm` builds cover Fedora 43/44 and openSUSE Tumbleweed; Arch Linux is protocol-tested;
-  Nix packages cover x86_64-linux and aarch64-linux.
+- **Broad Linux support**: native amd64/arm64 `.deb` builds cover Ubuntu 20.04–26.04 and Debian
+  11 Bullseye, 12 Bookworm, and 13 Trixie; native x86_64/aarch64 `.rpm` builds cover Fedora 43/44
+  and openSUSE Tumbleweed; Arch Linux is protocol-tested; Nix covers both Linux architectures.
 - **Automatic recovery**: rejected ASR service discovery credentials are refreshed while the current audio is replayed.
 
 ## How it feels

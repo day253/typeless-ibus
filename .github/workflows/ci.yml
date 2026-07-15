@@ -32,13 +32,13 @@ jobs:
           retention-days: 1
 
   debian-family-compatibility:
-    name: ${{ matrix.name }} / IBus protocol / .deb
-    runs-on: ubuntu-24.04
-    container: ${{ matrix.image }}
+    name: ${{ matrix.distribution.name }} / ${{ matrix.architecture.package_arch }} / IBus protocol / .deb
+    runs-on: ${{ matrix.architecture.runner }}
+    container: ${{ matrix.distribution.image }}
     strategy:
       fail-fast: false
       matrix:
-        include:
+        distribution:
           - name: Ubuntu 20.04
             image: ubuntu:20.04
             key: ubuntu-20.04
@@ -51,15 +51,20 @@ jobs:
           - name: Ubuntu 26.04
             image: ubuntu:26.04
             key: ubuntu-26.04
-          - name: Debian 11
+          - name: Debian 11 (Bullseye)
             image: debian:11
-            key: debian-11
-          - name: Debian 12
+            key: debian-11-bullseye
+          - name: Debian 12 (Bookworm)
             image: debian:12
-            key: debian-12
-          - name: Debian 13
+            key: debian-12-bookworm
+          - name: Debian 13 (Trixie)
             image: debian:13
-            key: debian-13
+            key: debian-13-trixie
+        architecture:
+          - runner: ubuntu-24.04
+            package_arch: amd64
+          - runner: ubuntu-24.04-arm
+            package_arch: arm64
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -83,7 +88,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.9.1
         with:
-          shared-key: ${{ matrix.key }}
+          shared-key: ${{ matrix.distribution.key }}-${{ matrix.architecture.package_arch }}
       - name: Build release engine
         run: cargo build --release --locked
       - name: Exercise the IBus D-Bus protocol
@@ -95,24 +100,26 @@ jobs:
       - name: Verify Debian dependency floor
         run: |
           deb=$(find target/debian -name '*.deb' -print -quit)
+          test "$(dpkg --print-architecture)" = "${{ matrix.architecture.package_arch }}"
+          test "$(dpkg-deb -f "$deb" Architecture)" = "${{ matrix.architecture.package_arch }}"
           depends=$(dpkg-deb -f "$deb" Depends)
           echo "$depends"
           echo "$depends" | grep -F 'ibus (>= 1.5.22)'
       - name: Upload distribution-native Debian package
         uses: actions/upload-artifact@v4
         with:
-          name: typeless-ibus-deb-${{ matrix.key }}-x86_64
+          name: typeless-ibus-deb-${{ matrix.distribution.key }}-${{ matrix.architecture.package_arch }}
           path: target/debian/*.deb
           if-no-files-found: error
 
   rpm-distribution-compatibility:
-    name: ${{ matrix.name }} / IBus protocol / .rpm
-    runs-on: ubuntu-24.04
-    container: ${{ matrix.image }}
+    name: ${{ matrix.distribution.name }} / ${{ matrix.architecture.package_arch }} / IBus protocol / .rpm
+    runs-on: ${{ matrix.architecture.runner }}
+    container: ${{ matrix.distribution.image }}
     strategy:
       fail-fast: false
       matrix:
-        include:
+        distribution:
           - name: Fedora 43
             image: fedora:43
             family: fedora
@@ -125,10 +132,15 @@ jobs:
             image: opensuse/tumbleweed:latest
             family: opensuse
             key: opensuse-tumbleweed
+        architecture:
+          - runner: ubuntu-24.04
+            package_arch: x86_64
+          - runner: ubuntu-24.04-arm
+            package_arch: aarch64
     steps:
       - name: Install native RPM build and IBus test dependencies
         run: |
-          case "${{ matrix.family }}" in
+          case "${{ matrix.distribution.family }}" in
             fedora)
               dnf install -y --setopt=install_weak_deps=False \
                 alsa-lib-devel \
@@ -184,6 +196,8 @@ jobs:
         run: |
           rpm_file=$(find target/rpm/RPMS -type f -name 'typeless-ibus-*.rpm' -print -quit)
           test -n "$rpm_file"
+          test "$(rpm --eval '%{_arch}')" = "${{ matrix.architecture.package_arch }}"
+          test "$(rpm -qp --queryformat '%{ARCH}' "$rpm_file")" = "${{ matrix.architecture.package_arch }}"
           rpm -Uvh "$rpm_file"
           rpm -q typeless-ibus
           rpm -q --requires typeless-ibus | grep -Fx 'ibus >= 1.5.22'
@@ -205,7 +219,7 @@ jobs:
       - name: Upload distribution-native RPMs
         uses: actions/upload-artifact@v4
         with:
-          name: typeless-ibus-rpm-${{ matrix.key }}-x86_64
+          name: typeless-ibus-rpm-${{ matrix.distribution.key }}-${{ matrix.architecture.package_arch }}
           path: |
             target/rpm/RPMS/**/*.rpm
             target/rpm/SRPMS/*.rpm
@@ -329,8 +343,22 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: typeless-ibus-rpm-*
-          path: release-packages/rpms
-          merge-multiple: true
+          path: release-rpms
+      - name: Collect binary RPMs and one SRPM per distribution
+        run: |
+          mkdir -p release-packages/rpms
+          for artifact_dir in release-rpms/typeless-ibus-rpm-*; do
+            artifact_name=${artifact_dir#release-rpms/typeless-ibus-rpm-}
+            artifact_arch=${artifact_name##*-}
+            find "$artifact_dir/RPMS" -type f -name '*.rpm' \
+              -exec cp {} release-packages/rpms/ \;
+            if [ "$artifact_arch" = "x86_64" ]; then
+              find "$artifact_dir/SRPMS" -type f -name '*.src.rpm' \
+                -exec cp {} release-packages/rpms/ \;
+            fi
+          done
+          test "$(find release-packages/rpms -type f -name '*.rpm' ! -name '*.src.rpm' | wc -l)" -eq 6
+          test "$(find release-packages/rpms -type f -name '*.src.rpm' | wc -l)" -eq 3
       - name: Download native Debian artifacts
         uses: actions/download-artifact@v4
         with:
@@ -339,17 +367,19 @@ jobs:
       - name: Give Debian packages distribution-specific names
         run: |
           mkdir -p release-packages/debs
-          for artifact_dir in release-debs/typeless-ibus-deb-*-x86_64; do
-            key=${artifact_dir#release-debs/typeless-ibus-deb-}
-            key=${key%-x86_64}
+          for artifact_dir in release-debs/typeless-ibus-deb-*; do
+            artifact_name=${artifact_dir#release-debs/typeless-ibus-deb-}
+            artifact_arch=${artifact_name##*-}
+            key=${artifact_name%-"$artifact_arch"}
             deb=$(find "$artifact_dir" -maxdepth 1 -type f -name '*.deb' -print -quit)
             test -n "$deb"
             filename=$(basename "$deb" .deb)
             architecture=${filename##*_}
+            test "$architecture" = "$artifact_arch"
             package_version=${filename%_*}
             cp "$deb" "release-packages/debs/${package_version}_${key}_${architecture}.deb"
           done
-          test "$(find release-packages/debs -type f -name '*.deb' | wc -l)" -eq 7
+          test "$(find release-packages/debs -type f -name '*.deb' | wc -l)" -eq 14
       - name: Create the release and upload native packages
         env:
           GH_TOKEN: ${{ github.token }}

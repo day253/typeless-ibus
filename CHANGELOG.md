@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Native arm64 Debian/Ubuntu packages and aarch64 Fedora/openSUSE packages, built and protocol-tested
+  on GitHub-hosted ARM64 runners.
+
+### Changed
+
+- Debian jobs and release assets now identify Debian 11 Bullseye, 12 Bookworm, and 13 Trixie by
+  both version and official codename.
+- Tagged releases now attach 14 DEBs, six binary RPMs, and one architecture-independent SRPM per
+  RPM distribution.
+
 ## [0.5.0] - 2026-07-15
 
 ### Added
