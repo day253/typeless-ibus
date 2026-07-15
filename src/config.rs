@@ -38,7 +38,7 @@ impl Default for Config {
             trigger_key: "XF86_Fn".to_string(),
             trigger_mode: TriggerMode::Hold,
             input_device: None,
-            max_recording_seconds: 120,
+            max_recording_seconds: 600,
         }
     }
 }
@@ -188,6 +188,7 @@ mod tests {
         let config = Config::default();
         assert_eq!(config.trigger_mode, TriggerMode::Hold);
         assert_eq!(config.trigger_keysym().unwrap(), Keysym::XF86_Fn);
+        assert_eq!(config.max_recording_seconds, 600);
     }
 
     #[test]

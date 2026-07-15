@@ -9,8 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Long dictation now preserves confirmed text across ASR/VAD segments, and finishing status no
-  longer replaces the visible transcript.
+- Long dictation now preserves confirmed text across ASR/VAD segments; finishing, timeout, and
+  recoverable ASR failures retain the latest visible transcript instead of clearing it.
 
 ### Added
 
@@ -19,8 +19,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- The IBus input source now appears as `Typeless Ibus` with the compact `聴` status symbol instead
+- The IBus input source now appears as `Typeless Ibus` with the compact `听` status symbol instead
   of the raw package name and `vox`.
+- The default maximum recording duration is now 600 seconds (10 minutes).
 - Ubuntu ARM CI now keeps each official container image's default APT repository configuration and
   retries dependency installation without substituting a custom mirror.
 - Debian jobs and release assets now identify Debian 11 Bullseye, 12 Bookworm, and 13 Trixie by

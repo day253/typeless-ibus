@@ -7,7 +7,7 @@
 3. 长按触发键开始录音，松开后结束录音。
 4. 识别中的文字显示为预编辑文本，最终文字由 IBus 提交。
 
-按 `Esc` 可以取消当前录音或识别。单次录音默认最多 120 秒。
+按 `Esc` 可以取消当前录音或识别。单次录音默认最多 600 秒（10 分钟）。
 
 部分笔记本的 `Fn` 键由固件处理，不会向 Linux 上报 `XF86_Fn`。这种情况可以把
 触发键改成 `Control_R` 或 `F8`；这不是 Wayland 限制。
@@ -25,7 +25,7 @@
 菜单由 IBus 和桌面环境绘制，不需要独立设置程序。选择后会立即生效并写入配置文件，
 不需要重新启动 IBus。
 
-麦克风默认跟随系统输入设备，最长录音时间默认是 120 秒。这两个低频选项保留在配置
+麦克风默认跟随系统输入设备，最长录音时间默认是 600 秒。这两个低频选项保留在配置
 文件和命令行中。
 
 ## 配置文件
@@ -43,7 +43,7 @@
   "triggerKey": "XF86_Fn",
   "triggerMode": "hold",
   "inputDevice": null,
-  "maxRecordingSeconds": 120
+  "maxRecordingSeconds": 600
 }
 ```
 
@@ -63,7 +63,7 @@ typeless-ibus-engine config show
 typeless-ibus-engine config set trigger-key Control_R
 typeless-ibus-engine config set trigger-mode hold
 typeless-ibus-engine config set input-device default
-typeless-ibus-engine config set max-recording-seconds 120
+typeless-ibus-engine config set max-recording-seconds 600
 typeless-ibus-engine config reset
 ```
 

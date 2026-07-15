@@ -399,6 +399,7 @@ async fn run_recognition(
         let _ = event_tx.send(event);
     });
     tokio::pin!(recognition);
+    let mut latest_text = String::new();
 
     let result = loop {
         tokio::select! {
@@ -416,6 +417,7 @@ async fn run_recognition(
                             .await
                         }
                         AsrEvent::Partial(text) | AsrEvent::Final(text) => {
+                            latest_text.clone_from(&text);
                             update_preedit(&emitter, &text).await;
                         }
                     }
@@ -428,33 +430,42 @@ async fn run_recognition(
     if !finish_session(&session, generation) {
         return;
     }
+    let commit_text = preferred_transcript(&result, &latest_text);
+    if let Err(error) = &result
+        && let Some(text) = &commit_text
+    {
+        tracing::warn!(
+            error = %format_args!("{error:#}"),
+            characters = text.chars().count(),
+            "recognition ended with an error; committing the latest visible transcript"
+        );
+    }
     hide_preedit(&emitter).await;
-    match result {
-        Ok(text) if !text.trim().is_empty() => {
-            let text = text.trim().to_string();
-            if let Err(error) = VoiceEngine::commit_text(&emitter, ibus_text(text.clone())).await {
-                tracing::error!(%error, "failed to commit recognized text");
-                show_error(
-                    &emitter,
-                    format!(
-                        "{}{error}",
-                        i18n::text(
-                            "Failed to insert the recognition result: ",
-                            "提交识别结果失败："
-                        )
-                    ),
-                )
-                .await;
-            } else {
-                tracing::info!(
-                    characters = text.chars().count(),
-                    "committed recognized text"
-                );
-                let _ =
-                    VoiceEngine::update_auxiliary_text(&emitter, ibus_text(String::new()), false)
-                        .await;
-            }
+    if let Some(text) = commit_text {
+        if let Err(error) = VoiceEngine::commit_text(&emitter, ibus_text(text.clone())).await {
+            tracing::error!(%error, "failed to commit recognized text");
+            show_error(
+                &emitter,
+                format!(
+                    "{}{error}",
+                    i18n::text(
+                        "Failed to insert the recognition result: ",
+                        "提交识别结果失败："
+                    )
+                ),
+            )
+            .await;
+        } else {
+            tracing::info!(
+                characters = text.chars().count(),
+                "committed recognized text"
+            );
+            let _ =
+                VoiceEngine::update_auxiliary_text(&emitter, ibus_text(String::new()), false).await;
         }
+        return;
+    }
+    match result {
         Ok(_) => {
             show_error(
                 &emitter,
@@ -474,6 +485,16 @@ async fn run_recognition(
             .await;
         }
     }
+}
+
+fn preferred_transcript(result: &anyhow::Result<String>, latest_text: &str) -> Option<String> {
+    let final_text = result.as_deref().unwrap_or_default().trim();
+    let text = if final_text.is_empty() {
+        latest_text.trim()
+    } else {
+        final_text
+    };
+    (!text.is_empty()).then(|| text.to_string())
 }
 
 fn request_stop(session: &Arc<Mutex<SessionState>>, generation: u64) -> bool {
@@ -584,5 +605,26 @@ mod tests {
         }));
         assert!(!finish_session(&session, 7));
         assert_eq!(lock_session(&session).phase, Phase::Recording);
+    }
+
+    #[test]
+    fn final_text_wins_and_latest_partial_prevents_data_loss() {
+        let final_result: anyhow::Result<String> = Ok("最终文本".to_string());
+        assert_eq!(
+            preferred_transcript(&final_result, "中间文本").as_deref(),
+            Some("最终文本")
+        );
+
+        let empty_result: anyhow::Result<String> = Ok(String::new());
+        assert_eq!(
+            preferred_transcript(&empty_result, "仍然可用的中间文本").as_deref(),
+            Some("仍然可用的中间文本")
+        );
+
+        let failed_result: anyhow::Result<String> = Err(anyhow::anyhow!("收尾超时"));
+        assert_eq!(
+            preferred_transcript(&failed_result, "超时前的完整内容").as_deref(),
+            Some("超时前的完整内容")
+        );
     }
 }
