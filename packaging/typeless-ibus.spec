@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           typeless-ibus
-Version:        0.4.0
+Version:        0.5.0
 Release:        1%{?dist}
 Summary:        Native IBus voice input engine for Linux
 
@@ -53,5 +53,8 @@ sed 's|/usr/libexec/typeless-ibus-engine|%{_libexecdir}/typeless-ibus-engine|' \
 %{_datadir}/ibus/component/typeless.xml
 
 %changelog
+* Wed Jul 15 2026 day253 <9634619+day253@users.noreply.github.com> - 0.5.0-1
+- Add native RPM and SRPM packaging for Fedora and openSUSE.
+
 * Wed Jul 15 2026 day253 <9634619+day253@users.noreply.github.com> - 0.4.0-1
 - Initial native RPM package.

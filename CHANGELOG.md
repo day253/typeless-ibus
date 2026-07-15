@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-07-15
+
+### Added
+
+- Distribution-native RPM and SRPM builds for Fedora 43/44 and openSUSE Tumbleweed.
+- Automatic RPM and SRPM attachment to versioned GitHub Releases.
+
+### Changed
+
+- Fedora and openSUSE CI now builds the native package, installs it, exercises the IBus protocol,
+  verifies clean removal, and uploads the resulting artifacts.
+- Distribution and installation documentation now covers native RPM packages and SRPM rebuilding.
+
 ## [0.4.0] - 2026-07-15
 
 ### Added
@@ -19,13 +32,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - English and Chinese IBus property labels selected automatically from the desktop locale.
 - JSON configuration with native `.deb`, Nix, and user-level source installation support.
 - IBus 1.5.22 compatibility with native Ubuntu 20.04–26.04 and Debian 11–13 protocol-tested `.deb` builds.
-- Distribution-native RPM and SRPM builds for Fedora 43/44 and openSUSE Tumbleweed, including
-  package installation, IBus protocol, and clean-removal tests.
-- Automatic RPM and SRPM attachment to versioned GitHub Releases.
 - IBus protocol compatibility tests for Arch Linux.
 - Nix Flake packages for x86_64-linux and aarch64-linux.
 - ASR handshake and real-audio diagnostics with `x-tt-logid` logging.
 - Automatic credential recovery and buffered audio replay after `service discovery failure`.
-- Multi-distribution CI for formatting, Clippy, tests, release builds, native `.deb`/`.rpm`
-  packaging, IBus protocol coverage, Nix builds, and a separate non-blocking live ASR availability
-  check.
+- Multi-distribution CI for formatting, Clippy, tests, release builds, native `.deb` packaging,
+  IBus protocol coverage, Nix builds, and a separate non-blocking live ASR availability check.
