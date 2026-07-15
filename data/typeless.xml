@@ -11,13 +11,13 @@
   <engines>
     <engine>
       <name>typeless</name>
-      <longname>typeless-ibus</longname>
+      <longname>Typeless Ibus</longname>
       <description>Doubao ASR voice input</description>
       <language>zh_CN</language>
       <license>MIT</license>
       <author>day253</author>
       <layout>us</layout>
-      <symbol>语</symbol>
+      <symbol>聴</symbol>
       <rank>80</rank>
     </engine>
   </engines>
