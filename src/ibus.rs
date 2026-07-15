@@ -145,6 +145,7 @@ mod tests {
         assert!(xml.contains(&format!("<name>{COMPONENT_NAME}</name>")));
         assert!(xml.contains(&format!("<name>{ENGINE_NAME}</name>")));
         assert!(xml.contains(&format!("<version>{}</version>", env!("CARGO_PKG_VERSION"))));
+        assert!(xml.contains("<symbol>语</symbol>"));
         assert!(xml.contains("/usr/libexec/typeless-ibus-engine"));
         assert!(!xml.contains("<setup>"));
         assert!(!xml.contains("<icon>"));
