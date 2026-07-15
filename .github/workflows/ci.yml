@@ -74,8 +74,8 @@ jobs:
             ubuntu-*-arm64)
               find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
                 -exec sed -i \
-                  -e 's|http://ports.ubuntu.com/ubuntu-ports|https://azure.ports.ubuntu.com|g' \
-                  -e 's|https://ports.ubuntu.com/ubuntu-ports|https://azure.ports.ubuntu.com|g' \
+                  -e 's|http://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com|g' \
+                  -e 's|https://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com|g' \
                   {} +
               ;;
           esac
