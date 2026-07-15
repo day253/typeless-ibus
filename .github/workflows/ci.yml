@@ -70,20 +70,30 @@ jobs:
     steps:
       - name: Install build and IBus test dependencies
         run: |
-          apt-get -o Acquire::Retries=5 update
-          apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
-            build-essential \
-            ca-certificates \
-            curl \
-            dbus \
-            dbus-x11 \
-            git \
-            ibus \
-            libasound2-dev \
-            libglib2.0-bin \
-            libopus-dev \
-            pkg-config \
+          packages=(
+            build-essential
+            ca-certificates
+            curl
+            dbus
+            dbus-x11
+            git
+            ibus
+            libasound2-dev
+            libglib2.0-bin
+            libopus-dev
+            pkg-config
             zstd
+          )
+          for attempt in 1 2 3; do
+            if apt-get -o Acquire::Retries=5 update && \
+              apt-get -o Acquire::Retries=5 install -y --no-install-recommends "${packages[@]}"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep "$((attempt * 20))"
+          done
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.9.1

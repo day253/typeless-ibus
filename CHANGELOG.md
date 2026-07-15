@@ -16,7 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The IBus input source now appears as `Typeless Ibus` with the compact `聴` status symbol instead
   of the raw package name and `vox`.
-- Ubuntu ARM CI now keeps each official container image's default APT repository configuration.
+- Ubuntu ARM CI now keeps each official container image's default APT repository configuration and
+  retries dependency installation without substituting a custom mirror.
 - Debian jobs and release assets now identify Debian 11 Bullseye, 12 Bookworm, and 13 Trixie by
   both version and official codename.
 - Tagged releases now attach 14 DEBs, six binary RPMs, and one architecture-independent SRPM per
