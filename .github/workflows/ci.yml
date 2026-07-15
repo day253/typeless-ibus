@@ -70,15 +70,6 @@ jobs:
     steps:
       - name: Install build and IBus test dependencies
         run: |
-          case "${{ matrix.distribution.key }}-${{ matrix.architecture.package_arch }}" in
-            ubuntu-*-arm64)
-              find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
-                -exec sed -i \
-                  -e 's|http://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com|g' \
-                  -e 's|https://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com|g' \
-                  {} +
-              ;;
-          esac
           apt-get -o Acquire::Retries=5 update
           apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
             build-essential \
