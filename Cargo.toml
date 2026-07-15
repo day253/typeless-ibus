@@ -1,6 +1,6 @@
 [package]
 name = "typeless-ibus"
-version = "0.5.0"
+version = "0.5.1"
 description = "Native IBus voice input engine for Linux"
 authors = ["day253 <9634619+day253@users.noreply.github.com>"]
 license = "MIT"

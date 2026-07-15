@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           typeless-ibus
-Version:        0.5.0
+Version:        0.5.1
 Release:        1%{?dist}
 Summary:        Native IBus voice input engine for Linux
 
@@ -53,6 +53,10 @@ sed 's|/usr/libexec/typeless-ibus-engine|%{_libexecdir}/typeless-ibus-engine|' \
 %{_datadir}/ibus/component/typeless.xml
 
 %changelog
+* Thu Jul 16 2026 day253 <9634619+day253@users.noreply.github.com> - 0.5.1-1
+- Preserve long dictation across ASR segments and recording timeouts.
+- Add native ARM64 packages and distribution-specific release assets.
+
 * Wed Jul 15 2026 day253 <9634619+day253@users.noreply.github.com> - 0.5.0-1
 - Add native RPM and SRPM packaging for Fedora and openSUSE.
 

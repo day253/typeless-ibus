@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-16
+
 ### Fixed
 
 - Long dictation now preserves confirmed text across ASR/VAD segments; finishing, timeout, and
