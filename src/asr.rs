@@ -33,6 +33,106 @@ pub enum AsrEvent {
     Final(String),
 }
 
+#[derive(Debug, Default)]
+struct TranscriptAccumulator {
+    confirmed: String,
+    current: String,
+    current_final: bool,
+}
+
+impl TranscriptAccumulator {
+    fn apply(&mut self, event: AsrEvent) -> AsrEvent {
+        match event {
+            AsrEvent::SpeechStarted => {
+                self.freeze_current();
+                let text = self.text();
+                if text.is_empty() {
+                    AsrEvent::SpeechStarted
+                } else {
+                    AsrEvent::Partial(text)
+                }
+            }
+            AsrEvent::Partial(text) => {
+                if self.starts_new_segment(&text) {
+                    self.freeze_current();
+                }
+                self.current = text;
+                self.current_final = false;
+                AsrEvent::Partial(self.text())
+            }
+            AsrEvent::Final(text) => {
+                self.current = text;
+                self.current_final = true;
+                AsrEvent::Final(self.text())
+            }
+        }
+    }
+
+    fn freeze_current(&mut self) {
+        if !self.current.is_empty() {
+            self.confirmed = merge_transcript(&self.confirmed, &self.current);
+            self.current.clear();
+        }
+        self.current_final = false;
+    }
+
+    fn starts_new_segment(&self, incoming: &str) -> bool {
+        if self.current.is_empty()
+            || incoming.starts_with(&self.current)
+            || self.current.starts_with(incoming)
+        {
+            return false;
+        }
+        if self.current_final {
+            return true;
+        }
+        let current_len = self.current.chars().count();
+        let incoming_len = incoming.chars().count();
+        current_len >= 8 && incoming_len.saturating_mul(2) < current_len
+    }
+
+    fn text(&self) -> String {
+        merge_transcript(&self.confirmed, &self.current)
+    }
+}
+
+fn merge_transcript(confirmed: &str, incoming: &str) -> String {
+    if confirmed.is_empty() {
+        return incoming.to_string();
+    }
+    if incoming.is_empty() {
+        return confirmed.to_string();
+    }
+    if incoming.starts_with(confirmed) {
+        return incoming.to_string();
+    }
+    if confirmed.starts_with(incoming) || confirmed.ends_with(incoming) {
+        return confirmed.to_string();
+    }
+
+    let confirmed_chars = confirmed.chars().collect::<Vec<_>>();
+    let incoming_chars = incoming.chars().collect::<Vec<_>>();
+    let overlap = (1..=confirmed_chars.len().min(incoming_chars.len()))
+        .rev()
+        .find(|length| {
+            confirmed_chars[confirmed_chars.len() - length..] == incoming_chars[..*length]
+        })
+        .unwrap_or(0);
+    let mut merged = confirmed.to_string();
+    if overlap == 0
+        && confirmed_chars
+            .last()
+            .is_some_and(|value| value.is_ascii_alphanumeric())
+        && incoming_chars
+            .first()
+            .is_some_and(|value| value.is_ascii_alphanumeric())
+    {
+        merged.push(' ');
+    }
+    merged.extend(incoming_chars.into_iter().skip(overlap));
+    merged
+}
+
 #[derive(Clone, PartialEq, prost::Message)]
 struct AsrRequest {
     #[prost(string, tag = "2")]
@@ -237,12 +337,14 @@ where
     let credentials = ensure_credentials(&client, credentials_path).await?;
     let mut buffered_audio = Vec::new();
     let mut source_finished = false;
+    let mut transcript = TranscriptAccumulator::default();
     let first_attempt = transcribe_attempt(
         &mut audio_rx,
         &credentials,
         &mut buffered_audio,
         &mut source_finished,
         false,
+        &mut transcript,
         &mut on_event,
     )
     .await;
@@ -264,6 +366,7 @@ where
                 &mut buffered_audio,
                 &mut source_finished,
                 true,
+                &mut transcript,
                 &mut on_event,
             )
             .await
@@ -288,6 +391,7 @@ async fn transcribe_attempt<F>(
     buffered_audio: &mut Vec<Vec<u8>>,
     source_finished: &mut bool,
     replay_buffer: bool,
+    transcript: &mut TranscriptAccumulator,
     on_event: &mut F,
 ) -> Result<String>
 where
@@ -337,7 +441,6 @@ where
             .context("初始化 Opus 编码器失败")?;
         let started_at = unix_time_ms();
         let mut frame_index = 0_u64;
-        let mut final_text = String::new();
         let mut finishing = false;
 
         if replay_buffer {
@@ -411,16 +514,13 @@ where
                         break;
                     }
                     if let Some(event) = parse_transcript(&response)? {
-                        if let AsrEvent::Final(text) = &event {
-                            final_text.clone_from(text);
-                        }
-                        on_event(event);
+                        on_event(transcript.apply(event));
                     }
                 }
             }
         }
 
-        Ok(final_text)
+        Ok(transcript.text())
     }
     .await;
 
@@ -839,7 +939,9 @@ fn parse_transcript(response: &AsrResponse) -> Result<Option<AsrEvent>> {
     let mut vad_finished = false;
     let mut nonstream_result = false;
     for result in results {
-        if let Some(value) = result.get("text").and_then(Value::as_str) {
+        if let Some(value) = result.get("text").and_then(Value::as_str)
+            && value.chars().count() > text.chars().count()
+        {
             text = value.to_string();
         }
         if result.get("is_interim").and_then(Value::as_bool) == Some(false) {
@@ -1102,6 +1204,134 @@ mod tests {
             parse_transcript(&response).unwrap(),
             Some(AsrEvent::Final(text)) if text == "你好。"
         ));
+    }
+
+    #[test]
+    fn parser_prefers_the_full_snapshot_from_multiple_results() {
+        let response = AsrResponse {
+            result_json: json!({
+                "results": [
+                    {
+                        "text": "你好呀。我觉得今天的天气不错。",
+                        "is_interim": true
+                    },
+                    {
+                        "text": "我觉得今天的天气不错。",
+                        "is_interim": true
+                    }
+                ],
+                "extra": {}
+            })
+            .to_string(),
+            ..Default::default()
+        };
+        assert!(matches!(
+            parse_transcript(&response).unwrap(),
+            Some(AsrEvent::Partial(text)) if text == "你好呀。我觉得今天的天气不错。"
+        ));
+    }
+
+    #[test]
+    fn parser_keeps_the_full_snapshot_for_a_final_result() {
+        let response = AsrResponse {
+            result_json: json!({
+                "results": [
+                    {
+                        "text": "现在是独立 demo 验证。",
+                        "is_interim": false,
+                        "is_vad_finished": true
+                    },
+                    {
+                        "text": "现在是独立demo验证",
+                        "is_interim": false,
+                        "extra": { "nonstream_result": true }
+                    }
+                ],
+                "extra": {}
+            })
+            .to_string(),
+            ..Default::default()
+        };
+        assert!(matches!(
+            parse_transcript(&response).unwrap(),
+            Some(AsrEvent::Final(text)) if text == "现在是独立 demo 验证。"
+        ));
+    }
+
+    #[test]
+    fn preserves_confirmed_text_across_vad_segments() {
+        let mut transcript = TranscriptAccumulator::default();
+        assert!(matches!(
+            transcript.apply(AsrEvent::SpeechStarted),
+            AsrEvent::SpeechStarted
+        ));
+        assert!(matches!(
+            transcript.apply(AsrEvent::Partial("这是第一段".to_string())),
+            AsrEvent::Partial(text) if text == "这是第一段"
+        ));
+        assert!(matches!(
+            transcript.apply(AsrEvent::Final("这是第一段。".to_string())),
+            AsrEvent::Final(text) if text == "这是第一段。"
+        ));
+        assert!(matches!(
+            transcript.apply(AsrEvent::SpeechStarted),
+            AsrEvent::Partial(text) if text == "这是第一段。"
+        ));
+        assert!(matches!(
+            transcript.apply(AsrEvent::Partial("这是第二段".to_string())),
+            AsrEvent::Partial(text) if text == "这是第一段。这是第二段"
+        ));
+        assert!(matches!(
+            transcript.apply(AsrEvent::Final("这是第二段。".to_string())),
+            AsrEvent::Final(text) if text == "这是第一段。这是第二段。"
+        ));
+        assert_eq!(transcript.text(), "这是第一段。这是第二段。");
+    }
+
+    #[test]
+    fn accepts_cumulative_snapshots_without_duplicating_text() {
+        let mut transcript = TranscriptAccumulator::default();
+        transcript.apply(AsrEvent::Final("第一句。".to_string()));
+        assert!(matches!(
+            transcript.apply(AsrEvent::Partial("第一句。第二句".to_string())),
+            AsrEvent::Partial(text) if text == "第一句。第二句"
+        ));
+        assert!(matches!(
+            transcript.apply(AsrEvent::Final("第一句。第二句。".to_string())),
+            AsrEvent::Final(text) if text == "第一句。第二句。"
+        ));
+    }
+
+    #[test]
+    fn replaces_revised_final_snapshots_instead_of_appending_them() {
+        let mut transcript = TranscriptAccumulator::default();
+        transcript.apply(AsrEvent::Final("我觉得今天不错。".to_string()));
+        assert!(matches!(
+            transcript.apply(AsrEvent::Final("我觉得今天天气不错。".to_string())),
+            AsrEvent::Final(text) if text == "我觉得今天天气不错。"
+        ));
+        assert_eq!(transcript.text(), "我觉得今天天气不错。");
+    }
+
+    #[test]
+    fn detects_a_large_segment_reset_without_a_vad_event() {
+        let mut transcript = TranscriptAccumulator::default();
+        transcript.apply(AsrEvent::Partial(
+            "这是没有显式分段事件的第一段长句。".to_string(),
+        ));
+        assert!(matches!(
+            transcript.apply(AsrEvent::Partial("第二段".to_string())),
+            AsrEvent::Partial(text) if text == "这是没有显式分段事件的第一段长句。第二段"
+        ));
+    }
+
+    #[test]
+    fn merges_overlapping_segments_and_separates_english_words() {
+        assert_eq!(
+            merge_transcript("今天很好", "很好，我们继续"),
+            "今天很好，我们继续"
+        );
+        assert_eq!(merge_transcript("hello", "world"), "hello world");
     }
 
     #[test]

@@ -102,9 +102,10 @@ impl VoiceEngine {
             tokio::time::sleep(max_duration).await;
             if request_stop(&session, generation) {
                 tracing::warn!(generation, "maximum recording duration reached");
-                update_preedit(
+                let _ = Self::update_auxiliary_text(
                     &owned_emitter,
-                    i18n::text("Finishing recognition…", "正在完成识别…"),
+                    ibus_text(i18n::text("Finishing recognition…", "正在完成识别…").to_string()),
+                    true,
                 )
                 .await;
             }
@@ -125,9 +126,10 @@ impl VoiceEngine {
             }
         };
         if should_stop {
-            update_preedit(
+            let _ = Self::update_auxiliary_text(
                 emitter,
-                i18n::text("Finishing recognition…", "正在完成识别…"),
+                ibus_text(i18n::text("Finishing recognition…", "正在完成识别…").to_string()),
+                true,
             )
             .await;
         }

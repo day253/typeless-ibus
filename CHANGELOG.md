@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Long dictation now preserves confirmed text across ASR/VAD segments, and finishing status no
+  longer replaces the visible transcript.
+
 ### Added
 
 - Native arm64 Debian/Ubuntu packages and aarch64 Fedora/openSUSE packages, built and protocol-tested
