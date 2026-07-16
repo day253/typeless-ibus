@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-07-17
+
 ### Changed
 
 - The waiting preedit now uses compact localized text: `Listening…` in English and `聆听中…` in
