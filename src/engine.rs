@@ -14,7 +14,7 @@ use zbus::zvariant::{Structure, Value};
 use zbus::{fdo, interface};
 
 const RELEASE_MASK: u32 = 1 << 30;
-const WAITING_PREEDIT: &str = "...";
+const WAITING_PREEDIT: &str = "…";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Phase {
@@ -598,8 +598,8 @@ mod tests {
     }
 
     #[test]
-    fn waiting_preedit_is_three_dots() {
-        assert_eq!(WAITING_PREEDIT, "...");
+    fn waiting_preedit_uses_a_centered_ellipsis() {
+        assert_eq!(WAITING_PREEDIT, "…");
     }
 
     #[test]
