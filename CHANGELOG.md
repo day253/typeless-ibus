@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The waiting preedit is now a compact `...` instead of a microphone icon and instructional text.
+
 ## [0.5.1] - 2026-07-16
 
 ### Fixed

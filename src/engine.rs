@@ -14,6 +14,7 @@ use zbus::zvariant::{Structure, Value};
 use zbus::{fdo, interface};
 
 const RELEASE_MASK: u32 = 1 << 30;
+const WAITING_PREEDIT: &str = "...";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Phase {
@@ -84,7 +85,7 @@ impl VoiceEngine {
         };
 
         let _ = Self::update_auxiliary_text(emitter, ibus_text(String::new()), false).await;
-        update_preedit(emitter, i18n::text("🎙 Hold and speak…", "🎙 按住并说话…")).await;
+        update_preedit(emitter, WAITING_PREEDIT).await;
 
         let owned_emitter = emitter.to_owned();
         let session = self.session.clone();
@@ -594,6 +595,11 @@ mod tests {
         let pressed_state = 0_u32;
         assert_eq!(pressed_state & RELEASE_MASK, 0);
         assert_ne!(RELEASE_MASK & RELEASE_MASK, 0);
+    }
+
+    #[test]
+    fn waiting_preedit_is_three_dots() {
+        assert_eq!(WAITING_PREEDIT, "...");
     }
 
     #[test]
