@@ -14,7 +14,8 @@ use zbus::zvariant::{Structure, Value};
 use zbus::{fdo, interface};
 
 const RELEASE_MASK: u32 = 1 << 30;
-const WAITING_PREEDIT: &str = "…";
+const WAITING_PREEDIT_ENGLISH: &str = "Listening…";
+const WAITING_PREEDIT_CHINESE: &str = "聆听中…";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Phase {
@@ -85,7 +86,11 @@ impl VoiceEngine {
         };
 
         let _ = Self::update_auxiliary_text(emitter, ibus_text(String::new()), false).await;
-        update_preedit(emitter, WAITING_PREEDIT).await;
+        update_preedit(
+            emitter,
+            i18n::text(WAITING_PREEDIT_ENGLISH, WAITING_PREEDIT_CHINESE),
+        )
+        .await;
 
         let owned_emitter = emitter.to_owned();
         let session = self.session.clone();
@@ -598,8 +603,9 @@ mod tests {
     }
 
     #[test]
-    fn waiting_preedit_uses_a_centered_ellipsis() {
-        assert_eq!(WAITING_PREEDIT, "…");
+    fn waiting_preedit_is_localized_and_uses_a_centered_ellipsis() {
+        assert_eq!(WAITING_PREEDIT_ENGLISH, "Listening…");
+        assert_eq!(WAITING_PREEDIT_CHINESE, "聆听中…");
     }
 
     #[test]
