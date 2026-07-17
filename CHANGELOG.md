@@ -12,6 +12,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An interactive bilingual product website deployed through GitHub Pages, with a CSS-drawn Ubuntu
   voice-input walkthrough and direct links from the project README.
 
+### Changed
+
+- The product website version is now generated from `Cargo.toml` during the GitHub Pages build.
+
 ## [0.5.2] - 2026-07-17
 
 ### Changed

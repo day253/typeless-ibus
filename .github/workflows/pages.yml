@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "website/**"
+      - "Cargo.toml"
+      - "packaging/build-website.sh"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -26,9 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/configure-pages@v5
+      - name: Build product website
+        run: ./packaging/build-website.sh target/pages
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: website
+          path: target/pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
