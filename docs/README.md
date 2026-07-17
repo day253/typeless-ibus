@@ -9,6 +9,7 @@
 - [安装与卸载](installation.md)：系统依赖、原生 `.deb`/`.rpm`、Nix 和用户级安装。
 - [使用与配置](usage.md)：触发方式、IBus 配置菜单和高级配置。
 - [架构与设计](architecture.md)：IBus、音频、ASR 和故障恢复流程。
+- [ASR 供应商](asr-providers.md)：当前适配器、OpenLess 调研与扩展约束。
 - [开发与验证](development.md)：本地检查、打包和 GitHub Actions。
 - [故障排查](troubleshooting.md)：按键、麦克风、IBus 和 ASR 诊断。
 - [数据、隐私与风险](privacy.md)：数据流、凭据、非官方协议和第三方说明。

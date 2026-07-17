@@ -2,13 +2,15 @@
 
 ## 数据流
 
-- 麦克风音频直接发送到豆包输入法相关服务，不经过本项目自己的服务器。
+- 默认配置把麦克风音频直接发送到豆包输入法相关服务；显式选择
+  `openai-compatible` 时，音频发送到用户配置的 endpoint。两种模式都不经过本项目
+  自己的服务器。
 - 项目不提供账号、云存储、历史记录或 LLM 处理。
 - 识别结果只通过本地 IBus 接口提交到当前输入框。
 
 ## 本地凭据
 
-首次使用会注册虚拟设备，并把设备标识与 Token 保存到：
+默认豆包 provider 首次使用会注册虚拟设备，并把设备标识与 Token 保存到：
 
 ```text
 ~/.local/share/typeless-ibus/credentials.json
@@ -16,6 +18,10 @@
 
 文件权限设置为 `0600`。日志不会输出完整凭据；请求失败时记录的是用于排查的
 `x-tt-logid`。
+
+OpenAI-compatible provider 的 `apiKey`（如果需要）保存在
+`~/.config/typeless-ibus/config.json`，该文件同样使用 `0600` 权限，但内容是明文。
+日志不会打印密钥。请避免把真实配置提交到 Git，并优先使用 HTTPS endpoint。
 
 ## 协议风险
 

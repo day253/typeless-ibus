@@ -23,6 +23,88 @@ pub enum TriggerMode {
     Toggle,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum AsrProviderKind {
+    Doubao,
+    OpenaiCompatible,
+}
+
+impl AsrProviderKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Doubao => "doubao",
+            Self::OpenaiCompatible => "openai-compatible",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields, rename_all = "camelCase")]
+pub struct AsrConfig {
+    pub provider: AsrProviderKind,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+impl Default for AsrConfig {
+    fn default() -> Self {
+        Self {
+            provider: AsrProviderKind::Doubao,
+            endpoint: None,
+            api_key: None,
+            model: None,
+            language: None,
+            prompt: None,
+        }
+    }
+}
+
+impl AsrConfig {
+    pub const DEFAULT_OPENAI_ENDPOINT: &'static str =
+        "https://api.openai.com/v1/audio/transcriptions";
+    pub const DEFAULT_OPENAI_MODEL: &'static str = "whisper-1";
+
+    pub fn endpoint(&self) -> &str {
+        self.endpoint
+            .as_deref()
+            .unwrap_or(Self::DEFAULT_OPENAI_ENDPOINT)
+    }
+
+    pub fn model(&self) -> &str {
+        self.model.as_deref().unwrap_or(Self::DEFAULT_OPENAI_MODEL)
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        if self.provider == AsrProviderKind::OpenaiCompatible {
+            let endpoint =
+                reqwest::Url::parse(self.endpoint()).context("asr.endpoint 必须是有效的 URL")?;
+            if !matches!(endpoint.scheme(), "http" | "https") {
+                bail!("asr.endpoint 只支持 http 或 https URL");
+            }
+            if self.model().trim().is_empty() {
+                bail!("asr.model 不能为空");
+            }
+        }
+        if self
+            .api_key
+            .as_deref()
+            .is_some_and(|value| value.trim().is_empty())
+        {
+            bail!("asr.apiKey 不能是空字符串；无密钥服务请删除该字段");
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default, deny_unknown_fields, rename_all = "camelCase")]
 pub struct Config {
@@ -30,6 +112,7 @@ pub struct Config {
     pub trigger_mode: TriggerMode,
     pub input_device: Option<String>,
     pub max_recording_seconds: u64,
+    pub asr: AsrConfig,
 }
 
 impl Default for Config {
@@ -39,6 +122,7 @@ impl Default for Config {
             trigger_mode: TriggerMode::Hold,
             input_device: None,
             max_recording_seconds: 600,
+            asr: AsrConfig::default(),
         }
     }
 }
@@ -127,6 +211,7 @@ impl Config {
         if !(1..=600).contains(&self.max_recording_seconds) {
             bail!("maxRecordingSeconds 必须在 1 到 600 之间");
         }
+        self.asr.validate()?;
         Ok(())
     }
 
@@ -189,6 +274,8 @@ mod tests {
         assert_eq!(config.trigger_mode, TriggerMode::Hold);
         assert_eq!(config.trigger_keysym().unwrap(), Keysym::XF86_Fn);
         assert_eq!(config.max_recording_seconds, 600);
+        assert_eq!(config.asr.provider, AsrProviderKind::Doubao);
+        assert_eq!(config.asr.endpoint, None);
     }
 
     #[test]
@@ -212,5 +299,42 @@ mod tests {
         for value in TRIGGER_KEY_CHOICES {
             assert!(parse_trigger_key(value).is_ok());
         }
+    }
+
+    #[test]
+    fn old_config_defaults_to_zero_configuration_doubao() {
+        let config: Config = serde_json::from_str(
+            r#"{
+                "triggerKey": "XF86_Fn",
+                "triggerMode": "hold",
+                "inputDevice": null,
+                "maxRecordingSeconds": 600
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(config.asr, AsrConfig::default());
+        assert_eq!(config.asr.provider.as_str(), "doubao");
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn validates_openai_compatible_configuration() {
+        let mut config = Config::default();
+        config.asr.provider = AsrProviderKind::OpenaiCompatible;
+        assert!(config.validate().is_ok());
+        assert_eq!(config.asr.endpoint(), AsrConfig::DEFAULT_OPENAI_ENDPOINT);
+        assert_eq!(config.asr.model(), AsrConfig::DEFAULT_OPENAI_MODEL);
+
+        config.asr.endpoint = Some("file:///tmp/asr".to_string());
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn serializes_default_asr_without_vendor_secrets() {
+        let value = serde_json::to_value(Config::default()).unwrap();
+        assert_eq!(value["asr"]["provider"], "doubao");
+        assert!(value["asr"].get("apiKey").is_none());
+        assert!(value["asr"].get("endpoint").is_none());
     }
 }

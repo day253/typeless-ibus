@@ -12,7 +12,7 @@
     <engine>
       <name>typeless</name>
       <longname>Typeless Ibus</longname>
-      <description>Doubao ASR voice input</description>
+      <description>Native ASR voice input</description>
       <language>zh_CN</language>
       <license>MIT</license>
       <author>day253</author>

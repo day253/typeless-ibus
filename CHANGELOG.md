@@ -7,6 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A Rust ASR provider interface that isolates IBus sessions from vendor-specific protocols.
+- An opt-in OpenAI-compatible `audio/transcriptions` provider with configurable endpoint, model,
+  optional Bearer API key, language, and prompt.
+- Unit coverage for legacy configuration compatibility, provider selection, WAV encoding, and a
+  mock multipart transcription endpoint.
+
+### Changed
+
+- Doubao remains the zero-configuration default when `asr` is absent, including automatic initial
+  credential acquisition and service-discovery credential recovery.
+- ASR diagnostics and audio fixtures now exercise the provider selected by the JSON configuration.
+
 ## [0.5.3] - 2026-07-18
 
 ### Added

@@ -1,6 +1,6 @@
 use crate::asr::{self, AsrEvent};
 use crate::audio::AudioCaptureHandle;
-use crate::config::{ConfigStore, TriggerMode};
+use crate::config::{AsrConfig, ConfigStore, TriggerMode};
 use crate::i18n;
 use crate::properties::{self, ConfigAction};
 use std::collections::HashMap;
@@ -95,10 +95,12 @@ impl VoiceEngine {
         let owned_emitter = emitter.to_owned();
         let session = self.session.clone();
         let credentials_path = self.credentials_path.clone();
+        let asr_config = config.asr.clone();
         tokio::spawn(run_recognition(
             session.clone(),
             generation,
             audio_rx,
+            asr_config,
             credentials_path,
             owned_emitter.clone(),
         ));
@@ -397,11 +399,12 @@ async fn run_recognition(
     session: Arc<Mutex<SessionState>>,
     generation: u64,
     audio_rx: mpsc::Receiver<Vec<u8>>,
+    asr_config: AsrConfig,
     credentials_path: PathBuf,
     emitter: SignalEmitter<'static>,
 ) {
     let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-    let recognition = asr::transcribe_realtime(audio_rx, &credentials_path, move |event| {
+    let recognition = asr::transcribe(&asr_config, audio_rx, &credentials_path, move |event| {
         let _ = event_tx.send(event);
     });
     tokio::pin!(recognition);

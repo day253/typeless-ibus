@@ -2,5 +2,8 @@
   "triggerKey": "XF86_Fn",
   "triggerMode": "hold",
   "inputDevice": null,
-  "maxRecordingSeconds": 600
+  "maxRecordingSeconds": 600,
+  "asr": {
+    "provider": "doubao"
+  }
 }
