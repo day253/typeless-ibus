@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           typeless-ibus
-Version:        0.5.2
+Version:        0.5.3
 Release:        1%{?dist}
 Summary:        Native IBus voice input engine for Linux
 
@@ -53,6 +53,10 @@ sed 's|/usr/libexec/typeless-ibus-engine|%{_libexecdir}/typeless-ibus-engine|' \
 %{_datadir}/ibus/component/typeless.xml
 
 %changelog
+* Sat Jul 18 2026 day253 <9634619+day253@users.noreply.github.com> - 0.5.3-1
+- Add the interactive bilingual GitHub Pages product website.
+- Generate the website version automatically from Cargo.toml.
+
 * Fri Jul 17 2026 day253 <9634619+day253@users.noreply.github.com> - 0.5.2-1
 - Add compact localized listening text for English and Chinese desktops.
 
