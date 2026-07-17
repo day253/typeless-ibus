@@ -15,6 +15,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - The product website version is now generated from `Cargo.toml` during the GitHub Pages build.
+- The website hero now focuses on the Rust implementation and direct input without clipboard
+  injection.
 
 ## [0.5.2] - 2026-07-17
 
