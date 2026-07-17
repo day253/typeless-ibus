@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="typeless-ibus 是面向 Linux 的原生 IBus 语音输入法。按住、说话、松开，文字直接进入当前输入框。"
+    />
+    <meta name="theme-color" content="#17111f" />
+    <meta property="og:title" content="typeless-ibus — 说出来，文字就到了" />
+    <meta
+      property="og:description"
+      content="Ubuntu 与 Linux 上轻量、原生的 IBus 语音输入体验。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://day253.github.io/typeless-ibus/" />
+    <title>typeless-ibus — Linux 原生语音输入</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+
+    <header class="site-header" aria-label="主导航">
+      <a class="brand" href="#top" aria-label="typeless-ibus 首页">
+        <span class="brand-mark" aria-hidden="true">听</span>
+        <span>typeless</span>
+      </a>
+      <nav class="nav-links" aria-label="页面导航">
+        <a href="#experience" data-i18n="navExperience">体验</a>
+        <a href="#features" data-i18n="navFeatures">特点</a>
+        <a href="#support" data-i18n="navSupport">支持</a>
+      </nav>
+      <div class="header-actions">
+        <button class="language-toggle" type="button" aria-label="Switch to English">
+          <span class="language-current">中</span><span aria-hidden="true"> / </span><span>EN</span>
+        </button>
+        <a
+          class="github-link"
+          href="https://github.com/day253/typeless-ibus"
+          aria-label="在 GitHub 查看 typeless-ibus"
+        >
+          <span class="github-dot" aria-hidden="true"></span>
+          GitHub
+        </a>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top">
+        <div class="hero-copy reveal">
+          <p class="eyebrow"><span></span><span data-i18n="heroEyebrow">Linux 原生 · IBus · Wayland</span></p>
+          <h1 data-i18n="heroTitle">说出来，<br /><em>文字就到了。</em></h1>
+          <p class="hero-lede" data-i18n="heroLede">
+            按住一个键，开口说，松开。语音直接变成当前应用里的文字，像输入法本来就该有的能力。
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://github.com/day253/typeless-ibus/releases/latest">
+              <span data-i18n="download">下载 v0.5.2</span><span aria-hidden="true">↘</span>
+            </a>
+            <a class="button button-quiet" href="#experience">
+              <span class="play-dot" aria-hidden="true"></span><span data-i18n="seeDemo">看看怎么用</span>
+            </a>
+          </div>
+          <ul class="hero-facts" aria-label="产品特点">
+            <li><span aria-hidden="true">◆</span> Rust</li>
+            <li><span aria-hidden="true">◆</span> <span data-i18n="noLlm">无 LLM</span></li>
+            <li><span aria-hidden="true">◆</span> <span data-i18n="noClipboard">无剪贴板注入</span></li>
+          </ul>
+        </div>
+
+        <div class="hero-visual reveal" aria-label="typeless 在 Ubuntu 文本框中输入语音的动画">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="desktop desktop-hero" data-demo-stage="listening">
+            <div class="ubuntu-bar">
+              <span data-i18n="desktopActivities">活动</span>
+              <span class="ubuntu-clock">7月18日 14:32</span>
+              <span class="system-icons" aria-hidden="true">⌁　●　⌄</span>
+            </div>
+            <div class="desktop-body">
+              <div class="dock" aria-hidden="true">
+                <span class="dock-app app-files"></span>
+                <span class="dock-app app-browser"></span>
+                <span class="dock-app app-notes"></span>
+                <span class="dock-app app-terminal"></span>
+                <span class="dock-divider"></span>
+                <span class="dock-grid">••<br />••</span>
+              </div>
+              <div class="notes-window">
+                <div class="window-titlebar">
+                  <div class="window-buttons" aria-hidden="true"><i></i><i></i><i></i></div>
+                  <span data-i18n="notesTitle">今天的笔记</span>
+                  <span></span>
+                </div>
+                <div class="note-page">
+                  <p class="note-date" data-i18n="noteDate">星期六 · 7月18日</p>
+                  <h3 data-i18n="noteHeading">周末计划</h3>
+                  <div class="type-line">
+                    <span class="committed-text"></span><span class="preedit-text" data-i18n="listening">聆听中…</span><span class="caret"></span>
+                  </div>
+                  <div class="paper-line"></div>
+                  <div class="paper-line short"></div>
+                </div>
+              </div>
+              <div class="input-source-pill"><span>听</span><b>Typeless Ibus</b></div>
+            </div>
+          </div>
+
+          <div class="voice-friend hero-friend" aria-hidden="true">
+            <div class="voice-ring ring-a"></div>
+            <div class="voice-ring ring-b"></div>
+            <div class="friend-ear ear-left"></div>
+            <div class="friend-ear ear-right"></div>
+            <div class="friend-body">
+              <i class="eye eye-left"></i><i class="eye eye-right"></i>
+              <i class="cheek cheek-left"></i><i class="cheek cheek-right"></i>
+              <i class="mouth"></i>
+            </div>
+            <div class="sound-specks"><i></i><i></i><i></i></div>
+          </div>
+
+          <div class="listening-card">
+            <div class="tiny-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <div><small data-i18n="status">状态</small><strong data-i18n="listening">聆听中…</strong></div>
+            <kbd>Fn</kbd>
+          </div>
+        </div>
+      </section>
+
+      <section class="story" id="experience">
+        <div class="section-intro reveal">
+          <p class="eyebrow"><span></span><span data-i18n="storyEyebrow">一次顺手的输入</span></p>
+          <h2 data-i18n="storyTitle">不用离开键盘。<br />也不用打断思路。</h2>
+          <p data-i18n="storyIntro">向下滑，看看一句话如何自然地进入 Ubuntu 当前窗口。</p>
+        </div>
+
+        <div class="story-layout">
+          <div class="story-stage">
+            <div class="desktop story-desktop" data-stage="0" aria-live="polite">
+              <div class="ubuntu-bar">
+                <span data-i18n="desktopActivities">活动</span>
+                <span>14:32</span>
+                <span class="system-icons" aria-hidden="true">⌁　●　⌄</span>
+              </div>
+              <div class="desktop-body">
+                <div class="dock" aria-hidden="true">
+                  <span class="dock-app app-files"></span>
+                  <span class="dock-app app-browser"></span>
+                  <span class="dock-app app-notes"></span>
+                  <span class="dock-app app-terminal"></span>
+                  <span class="dock-divider"></span>
+                  <span class="dock-grid">••<br />••</span>
+                </div>
+                <div class="chat-window">
+                  <div class="window-titlebar">
+                    <div class="window-buttons" aria-hidden="true"><i></i><i></i><i></i></div>
+                    <span data-i18n="chatTitle">团队聊天</span>
+                    <span class="online-dot"></span>
+                  </div>
+                  <div class="chat-body">
+                    <div class="message"><span class="avatar avatar-one">森</span><p data-i18n="messageOne">下午要不要一起去公园？</p></div>
+                    <div class="message self"><p data-i18n="messageTwo">好呀，我安排一下时间。</p><span class="avatar avatar-two">你</span></div>
+                    <div class="compose-box">
+                      <span class="compose-text"></span><span class="compose-preedit"></span><span class="compose-caret"></span>
+                      <span class="send-button" aria-hidden="true">↑</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="stage-mascot voice-friend" aria-hidden="true">
+                  <div class="voice-ring ring-a"></div><div class="voice-ring ring-b"></div>
+                  <div class="friend-ear ear-left"></div><div class="friend-ear ear-right"></div>
+                  <div class="friend-body">
+                    <i class="eye eye-left"></i><i class="eye eye-right"></i>
+                    <i class="cheek cheek-left"></i><i class="cheek cheek-right"></i><i class="mouth"></i>
+                  </div>
+                  <div class="sound-specks"><i></i><i></i><i></i></div>
+                </div>
+                <div class="stage-status"><span class="stage-status-dot"></span><span class="stage-status-label" data-i18n="ready">准备好了</span></div>
+              </div>
+            </div>
+            <div class="hold-control">
+              <button class="fn-key" type="button" aria-describedby="hold-hint"><span>Fn</span><small data-i18n="hold">按住</small></button>
+              <p id="hold-hint" data-i18n="holdHint">也可以按住这里试一试</p>
+            </div>
+            <div class="stage-dots" aria-label="演示进度">
+              <button class="active" type="button" data-stage-target="0" aria-label="步骤 1"></button>
+              <button type="button" data-stage-target="1" aria-label="步骤 2"></button>
+              <button type="button" data-stage-target="2" aria-label="步骤 3"></button>
+              <button type="button" data-stage-target="3" aria-label="步骤 4"></button>
+            </div>
+          </div>
+
+          <div class="story-steps">
+            <article class="story-step active" data-stage="0">
+              <span>01</span><h3 data-i18n="stepOneTitle">光标放在任何输入框</h3>
+              <p data-i18n="stepOneBody">聊天、浏览器、笔记或终端。Typeless 是输入法，不挑应用。</p>
+            </article>
+            <article class="story-step" data-stage="1">
+              <span>02</span><h3 data-i18n="stepTwoTitle">按住 Fn，开始说</h3>
+              <p data-i18n="stepTwoBody">轻巧的“聆听中…”告诉你它已经准备好，不用寻找录音窗口。</p>
+            </article>
+            <article class="story-step" data-stage="2">
+              <span>03</span><h3 data-i18n="stepThreeTitle">文字跟着声音生长</h3>
+              <p data-i18n="stepThreeBody">识别结果以原生 IBus 预编辑文本出现，长句和停顿也不会丢掉前文。</p>
+            </article>
+            <article class="story-step" data-stage="3">
+              <span>04</span><h3 data-i18n="stepFourTitle">松开，直接写入</h3>
+              <p data-i18n="stepFourBody">最终文字提交到当前光标，不经过剪贴板，也不模拟粘贴。</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="features" id="features">
+        <div class="section-heading reveal">
+          <p class="eyebrow"><span></span><span data-i18n="featuresEyebrow">小而专注</span></p>
+          <h2 data-i18n="featuresTitle">只做好语音输入。</h2>
+          <p data-i18n="featuresIntro">没有账号、历史记录或 LLM 改写。一个安静的输入法，留在系统该在的位置。</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card card-native reveal">
+            <div class="feature-art native-art" aria-hidden="true"><span class="native-caret"></span><span class="native-word">你好</span><i></i><i></i><i></i></div>
+            <span class="card-number">01</span>
+            <h3 data-i18n="nativeTitle">原生 IBus</h3>
+            <p data-i18n="nativeBody">通过发行版已有的 GTK、Qt、XIM 与 Wayland 模块覆盖日常应用。</p>
+          </article>
+          <article class="feature-card card-rust reveal">
+            <div class="feature-art rust-art" aria-hidden="true"><span>{</span><b>Rust</b><span>}</span><i></i></div>
+            <span class="card-number">02</span>
+            <h3 data-i18n="rustTitle">轻量 Rust 核心</h3>
+            <p data-i18n="rustBody">不依赖 Python、GTK 设置程序或常驻网页服务，安装后安静运行。</p>
+          </article>
+          <article class="feature-card card-private reveal">
+            <div class="feature-art private-art" aria-hidden="true"><span class="shield">✓</span><span class="no-clipboard">⌘C</span><i></i></div>
+            <span class="card-number">03</span>
+            <h3 data-i18n="directTitle">直接提交文字</h3>
+            <p data-i18n="directBody">不读取和覆盖剪贴板，不注入快捷键；音频仅用于实时语音识别。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="support" id="support">
+        <div class="support-card reveal">
+          <div class="support-copy">
+            <p class="eyebrow light"><span></span><span data-i18n="supportEyebrow">从旧机器到新机器</span></p>
+            <h2 data-i18n="supportTitle">你的 Linux，<br />大概率已经准备好了。</h2>
+            <p data-i18n="supportBody">支持 IBus 1.5.22 及以上版本，提供 x86_64 与 ARM64 原生安装包。</p>
+            <a class="button button-light" href="https://github.com/day253/typeless-ibus/releases/latest"><span data-i18n="choosePackage">选择安装包</span><span>↗</span></a>
+          </div>
+          <div class="distro-cloud" aria-label="支持的 Linux 发行版">
+            <span class="distro ubuntu"><i></i>Ubuntu <b>20.04—26.04</b></span>
+            <span class="distro debian"><i></i>Debian <b>11—13</b></span>
+            <span class="distro fedora"><i></i>Fedora <b>43 / 44</b></span>
+            <span class="distro suse"><i></i>openSUSE <b>Tumbleweed</b></span>
+            <span class="distro arch"><i></i>Arch Linux <b data-i18n="tested">协议测试</b></span>
+            <span class="distro nix"><i></i>Nix <b>x86_64 / aarch64</b></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="final-cta">
+        <div class="final-friend voice-friend" aria-hidden="true">
+          <div class="voice-ring ring-a"></div><div class="voice-ring ring-b"></div>
+          <div class="friend-ear ear-left"></div><div class="friend-ear ear-right"></div>
+          <div class="friend-body"><i class="eye eye-left"></i><i class="eye eye-right"></i><i class="cheek cheek-left"></i><i class="cheek cheek-right"></i><i class="mouth"></i></div>
+        </div>
+        <p class="eyebrow centered"><span></span><span data-i18n="finalEyebrow">开口就好</span><span></span></p>
+        <h2 data-i18n="finalTitle">下一句话，不用打字。</h2>
+        <p data-i18n="finalBody">安装 typeless-ibus，把声音放进正在使用的输入框。</p>
+        <div class="hero-actions centered-actions">
+          <a class="button button-primary" href="https://github.com/day253/typeless-ibus/releases/latest"><span data-i18n="downloadLinux">下载 Linux 安装包</span><span>↘</span></a>
+          <a class="button button-quiet" href="https://github.com/day253/typeless-ibus"><span data-i18n="readSource">查看源代码</span><span>↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">听</span><span>typeless</span></a>
+      <p data-i18n="footer">为 Linux 做的一件小事 · Rust + IBus · MIT License</p>
+      <div><a href="https://github.com/day253/typeless-ibus/releases">Releases</a><a href="https://github.com/day253/typeless-ibus/blob/main/docs/README.md">Docs</a><a href="https://github.com/day253/typeless-ibus">GitHub</a></div>
+    </footer>
+  </body>
+</html>

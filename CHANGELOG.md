@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- An interactive bilingual product website deployed through GitHub Pages, with a CSS-drawn Ubuntu
+  voice-input walkthrough and direct links from the project README.
+
 ## [0.5.2] - 2026-07-17
 
 ### Changed

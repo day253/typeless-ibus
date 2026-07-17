@@ -1,6 +1,8 @@
-[English](README.md) | 中文
+[English](README.md) | 中文 · [产品主页](https://day253.github.io/typeless-ibus/)
 
 # typeless-ibus
+
+**[查看 typeless-ibus 的交互效果 →](https://day253.github.io/typeless-ibus/)**
 
 typeless-ibus 是一个面向 Linux 的原生 IBus 语音输入法。它把语音识别结果直接写入
 当前输入框，包括在 GNOME Wayland 下也不依赖剪贴板、模拟粘贴或 X11。

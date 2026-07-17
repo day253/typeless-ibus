@@ -1,6 +1,8 @@
-English | [中文](README_zh.md)
+English | [中文](README_zh.md) · [Product website](https://day253.github.io/typeless-ibus/)
 
 # typeless-ibus
+
+**[See typeless-ibus in action →](https://day253.github.io/typeless-ibus/)**
 
 typeless-ibus is a native IBus voice input method for Linux. It writes speech recognition results
 directly into the focused text field, including on GNOME Wayland, without clipboard injection,
