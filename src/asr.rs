@@ -1,3 +1,11 @@
+mod bailian_realtime;
+mod cloud_batch;
+mod openai_compatible;
+mod provider;
+mod shared;
+mod volcengine;
+mod volcengine_frame;
+
 use anyhow::{Context, Result, anyhow, bail};
 use futures_util::{SinkExt, StreamExt};
 use http::HeaderMap;
@@ -15,7 +23,14 @@ use tokio::time::timeout;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+use typeless_ibus::config::{AsrConfig, AsrProviderKind};
 use uuid::Uuid;
+
+use self::bailian_realtime::BailianRealtimeProvider;
+use self::cloud_batch::CloudBatchProvider;
+use self::openai_compatible::OpenaiCompatibleProvider;
+use self::provider::{AsrProvider, DiagnosticFuture, EventHandler, RecognitionFuture};
+use self::volcengine::VolcengineProvider;
 
 const REGISTER_URL: &str = "https://log.snssdk.com/service/2/device_register/";
 const SETTINGS_URL: &str = "https://is.snssdk.com/service/settings/v3/";
@@ -31,6 +46,82 @@ pub enum AsrEvent {
     SpeechStarted,
     Partial(String),
     Final(String),
+}
+
+struct DoubaoProvider {
+    credentials_path: std::path::PathBuf,
+}
+
+impl AsrProvider for DoubaoProvider {
+    fn kind(&self) -> AsrProviderKind {
+        AsrProviderKind::Doubao
+    }
+
+    fn transcribe<'a>(
+        &'a self,
+        audio_rx: mpsc::Receiver<Vec<u8>>,
+        on_event: EventHandler,
+    ) -> RecognitionFuture<'a> {
+        Box::pin(transcribe_doubao_realtime(
+            audio_rx,
+            &self.credentials_path,
+            on_event,
+        ))
+    }
+
+    fn diagnose<'a>(&'a self) -> DiagnosticFuture<'a> {
+        Box::pin(diagnose_doubao_service(&self.credentials_path))
+    }
+}
+
+fn configured_provider(
+    config: &AsrConfig,
+    credentials_path: &Path,
+) -> Result<Box<dyn AsrProvider>> {
+    config.validate()?;
+    match config.provider {
+        AsrProviderKind::Doubao => Ok(Box::new(DoubaoProvider {
+            credentials_path: credentials_path.to_path_buf(),
+        })),
+        AsrProviderKind::OpenaiCompatible
+        | AsrProviderKind::Whisper
+        | AsrProviderKind::Groq
+        | AsrProviderKind::Siliconflow
+        | AsrProviderKind::Zhipu => Ok(Box::new(OpenaiCompatibleProvider::new(config.clone())?)),
+        AsrProviderKind::Elevenlabs
+        | AsrProviderKind::Openrouter
+        | AsrProviderKind::XiaomiMimoAsr
+        | AsrProviderKind::BailianFunAsrFlash => {
+            Ok(Box::new(CloudBatchProvider::new(config.clone())?))
+        }
+        AsrProviderKind::Bailian | AsrProviderKind::BailianQwen3Realtime => {
+            Ok(Box::new(BailianRealtimeProvider::new(config.clone())?))
+        }
+        AsrProviderKind::Volcengine => Ok(Box::new(VolcengineProvider::new(config.clone())?)),
+    }
+}
+
+pub async fn diagnose(config: &AsrConfig, credentials_path: &Path) -> Result<()> {
+    let provider = configured_provider(config, credentials_path)?;
+    tracing::info!(
+        provider = provider.kind().as_str(),
+        "diagnosing ASR provider"
+    );
+    provider.diagnose().await
+}
+
+pub async fn transcribe<F>(
+    config: &AsrConfig,
+    audio_rx: mpsc::Receiver<Vec<u8>>,
+    credentials_path: &Path,
+    on_event: F,
+) -> Result<String>
+where
+    F: FnMut(AsrEvent) + Send + 'static,
+{
+    let provider = configured_provider(config, credentials_path)?;
+    tracing::info!(provider = provider.kind().as_str(), "starting ASR session");
+    provider.transcribe(audio_rx, Box::new(on_event)).await
 }
 
 #[derive(Debug, Default)]
@@ -240,24 +331,24 @@ impl fmt::Display for AsrServiceError {
 
 impl std::error::Error for AsrServiceError {}
 
-pub async fn diagnose_service(credentials_path: &Path) -> Result<()> {
+async fn diagnose_doubao_service(credentials_path: &Path) -> Result<()> {
     let client = reqwest::Client::builder()
         .user_agent(USER_AGENT)
         .build()
         .context("创建网络客户端失败")?;
-    let content = tokio::fs::read_to_string(credentials_path)
+    let had_credentials = tokio::fs::try_exists(credentials_path)
         .await
-        .with_context(|| format!("读取 ASR 凭据失败：{}", credentials_path.display()))?;
-    let credentials: DeviceCredentials =
-        serde_json::from_str(&content).context("解析 ASR 凭据失败")?;
-    if credentials.device_id.is_empty()
-        || credentials.cdid.is_empty()
-        || credentials.token.is_empty()
-    {
-        bail!("ASR 凭据不完整，缺少 device_id、cdid 或 token");
-    }
-
-    println!("asr.credentials: loaded (secrets redacted)");
+        .with_context(|| format!("检查 ASR 凭据失败：{}", credentials_path.display()))?;
+    let credentials = ensure_credentials(&client, credentials_path).await?;
+    println!("asr.provider: doubao (zero-configuration default)");
+    println!(
+        "asr.credentials: {} (secrets redacted)",
+        if had_credentials {
+            "loaded"
+        } else {
+            "acquired"
+        }
+    );
     let refreshed_token = get_asr_token(&client, &credentials.device_id, &credentials.cdid).await?;
     println!(
         "asr.settings: ok (cached_token_current={})",
@@ -322,13 +413,13 @@ pub async fn diagnose_service(credentials_path: &Path) -> Result<()> {
     )
 }
 
-pub async fn transcribe_realtime<F>(
+async fn transcribe_doubao_realtime<F>(
     mut audio_rx: mpsc::Receiver<Vec<u8>>,
     credentials_path: &Path,
     mut on_event: F,
 ) -> Result<String>
 where
-    F: FnMut(AsrEvent),
+    F: FnMut(AsrEvent) + Send,
 {
     let client = reqwest::Client::builder()
         .user_agent(USER_AGENT)
@@ -591,7 +682,11 @@ where
     send_request(socket, request_message(request_id, token, "FinishSession")).await
 }
 
-pub async fn check_audio_fixture(audio_path: &Path, credentials_path: &Path) -> Result<String> {
+pub async fn check_audio_fixture(
+    config: &AsrConfig,
+    audio_path: &Path,
+    credentials_path: &Path,
+) -> Result<String> {
     let pcm = tokio::fs::read(audio_path)
         .await
         .with_context(|| format!("读取 ASR 测试音频失败：{}", audio_path.display()))?;
@@ -611,7 +706,7 @@ pub async fn check_audio_fixture(audio_path: &Path, credentials_path: &Path) -> 
         }
     });
 
-    let recognition = transcribe_realtime(audio_rx, credentials_path, |_| {});
+    let recognition = transcribe(config, audio_rx, credentials_path, |_| {});
     let result = timeout(Duration::from_secs(60), recognition)
         .await
         .context("ASR 测试音频识别超时")?;
@@ -972,6 +1067,8 @@ fn parse_transcript(response: &AsrResponse) -> Result<Option<AsrEvent>> {
 async fn ensure_credentials(client: &reqwest::Client, path: &Path) -> Result<DeviceCredentials> {
     if let Ok(content) = tokio::fs::read_to_string(path).await
         && let Ok(credentials) = serde_json::from_str::<DeviceCredentials>(&content)
+        && !credentials.device_id.is_empty()
+        && !credentials.cdid.is_empty()
         && !credentials.token.is_empty()
     {
         return Ok(credentials);
@@ -1451,5 +1548,30 @@ mod tests {
         assert_eq!(payload["extra"]["did"], "device-under-test");
         assert_eq!(payload["audio_info"]["format"], "speech_opus");
         assert_eq!(payload["audio_info"]["sample_rate"], SAMPLE_RATE);
+    }
+
+    #[test]
+    fn provider_factory_keeps_doubao_as_the_default() {
+        let provider =
+            configured_provider(&AsrConfig::default(), Path::new("credentials.json")).unwrap();
+        assert_eq!(provider.kind(), AsrProviderKind::Doubao);
+    }
+
+    #[test]
+    fn provider_factory_routes_every_cloud_protocol() {
+        for kind in AsrProviderKind::ALL {
+            let mut config = AsrConfig {
+                provider: kind,
+                api_key: Some("api-key".to_string()),
+                app_key: Some("app-key".to_string()),
+                access_key: Some("access-key".to_string()),
+                ..AsrConfig::default()
+            };
+            if kind == AsrProviderKind::Doubao {
+                config.api_key = None;
+            }
+            let provider = configured_provider(&config, Path::new("credentials.json")).unwrap();
+            assert_eq!(provider.kind(), kind);
+        }
     }
 }

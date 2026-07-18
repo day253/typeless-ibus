@@ -4,7 +4,7 @@ mod ibus;
 
 use anyhow::{Context, Result, bail};
 use std::path::Path;
-use typeless_ibus::config::{Config, ConfigStore, TriggerMode};
+use typeless_ibus::config::{AsrProviderKind, Config, ConfigStore, TriggerMode};
 use typeless_ibus::{audio, config, i18n, properties};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -68,14 +68,17 @@ async fn run() -> Result<()> {
                 "trigger: {} ({:?})",
                 config.trigger_key, config.trigger_mode
             );
+            println!("asr.provider: {}", config.asr.provider.as_str());
             println!("ibus: {}", ibus::ibus_address()?);
             print_audio_devices()?;
             println!("check: ok");
             return Ok(());
         }
         Some("--check-asr") => {
+            let path = config::config_path()?;
+            let effective = Config::load_or_create(&path)?;
             let credentials_path = config::credentials_path()?;
-            asr::diagnose_service(&credentials_path).await?;
+            asr::diagnose(&effective.asr, &credentials_path).await?;
             return Ok(());
         }
         Some("--check-asr-audio") => {
@@ -85,8 +88,12 @@ async fn run() -> Result<()> {
             if let Some(extra) = arguments.next() {
                 bail!("--check-asr-audio 收到了多余参数：{extra}");
             }
+            let path = config::config_path()?;
+            let effective = Config::load_or_create(&path)?;
             let credentials_path = config::credentials_path()?;
-            let text = asr::check_audio_fixture(Path::new(&audio_path), &credentials_path).await?;
+            let text =
+                asr::check_audio_fixture(&effective.asr, Path::new(&audio_path), &credentials_path)
+                    .await?;
             println!("asr.audio: recognized {text:?}");
             return Ok(());
         }
@@ -102,6 +109,7 @@ async fn run() -> Result<()> {
         config = %config_path.display(),
         trigger = %effective.trigger_key,
         mode = ?effective.trigger_mode,
+        asr_provider = effective.asr.provider.as_str(),
         "starting typeless-ibus engine"
     );
     let _connection = ibus::serve(config, credentials_path).await?;
@@ -148,6 +156,10 @@ fn run_config_command(mut arguments: impl Iterator<Item = String>) -> Result<()>
                     config.max_recording_seconds =
                         value.parse().expect("recording limit was validated");
                 }
+                "asr-provider" => {
+                    config.asr.provider =
+                        AsrProviderKind::parse(&value).expect("ASR provider was validated")
+                }
                 _ => unreachable!("configuration key was validated"),
             })?;
             println!("已更新 {key}：{value}");
@@ -180,8 +192,19 @@ fn validate_config_assignment(key: &str, value: &str) -> Result<()> {
                 bail!("max-recording-seconds 必须在 1 到 600 之间")
             }
         }
+        "asr-provider" if AsrProviderKind::parse(value).is_some() => Ok(()),
+        "asr-provider" => {
+            bail!(
+                "asr-provider 只支持：{}",
+                AsrProviderKind::ALL
+                    .iter()
+                    .map(|provider| provider.as_str())
+                    .collect::<Vec<_>>()
+                    .join("、")
+            )
+        }
         _ => bail!(
-            "未知配置项：{key}；可用 trigger-key、trigger-mode、input-device、max-recording-seconds"
+            "未知配置项：{key}；可用 trigger-key、trigger-mode、input-device、max-recording-seconds、asr-provider"
         ),
     }
 }

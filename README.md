@@ -18,10 +18,15 @@ already using.
 - **Built for Wayland**: text input uses IBus D-Bus interfaces instead of keyboard or paste simulation.
 - **System-native controls**: change the trigger key and recording mode from the IBus input-source menu, with English and Chinese labels selected from the system locale.
 - **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit, Python runtime, or LLM.
+- **Zero-config speech recognition**: Doubao is the default provider and automatically obtains its
+  own credentials; no account or API key is required. JSON configuration can instead select
+  OpenAI, Groq, OpenRouter, SiliconFlow, Zhipu, ElevenLabs, Xiaomi MiMo, Alibaba Cloud Model
+  Studio, Volcengine, or another OpenAI-compatible ASR endpoint.
 - **Broad Linux support**: native amd64/arm64 `.deb` builds cover Ubuntu 20.04–26.04 and Debian
   11 Bullseye, 12 Bookworm, and 13 Trixie; native x86_64/aarch64 `.rpm` builds cover Fedora 43/44
   and openSUSE Tumbleweed; Arch Linux is protocol-tested; Nix covers both Linux architectures.
-- **Automatic recovery**: rejected ASR service discovery credentials are refreshed while the current audio is replayed.
+- **Automatic recovery**: rejected Doubao service-discovery credentials are refreshed while the
+  current audio is replayed.
 
 ## How it feels
 
@@ -41,7 +46,7 @@ Wayland applications. The project does not ship separate frontends or Fcitx5 sup
 not include Windows or macOS clients, LLM rewriting, accounts, cloud quotas, history, or dictionary
 features.
 
-The speech protocol implementation references
+The default speech protocol implementation references
 [`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr).
 
 ## Documentation
@@ -52,6 +57,7 @@ Detailed documentation is currently maintained in Chinese:
 - [Distribution support](docs/distributions.md)
 - [Usage and configuration](docs/usage.md)
 - [Architecture and design](docs/architecture.md)
+- [ASR providers and extension design](docs/asr-providers.md)
 - [Development and validation](docs/development.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Data, privacy, and risks](docs/privacy.md)
