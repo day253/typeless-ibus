@@ -1,5 +1,7 @@
 # 豆包零配置 ASR
 
+[文档首页](../README.md) · [ASR 供应商](README.md) · 默认 provider
+
 豆包是 typeless-ibus 的默认供应商，`provider` 为 `doubao`。它不要求注册账号，也没有需要
 用户获取的 API Key、endpoint 或 model。
 
@@ -52,8 +54,13 @@
 第一条命令会实际执行服务发现；第二条会上传测试音频并检查是否返回非空文字。用户级安装
 请使用 `~/.local/libexec/typeless-ibus-engine`。
 
-该协议并非公开、稳定的商业 API，服务端行为可能变化。实现来源与风险说明见
-[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr) 和
-[数据、隐私与风险](../privacy.md)。
+## 实现来源与边界
+
+默认语音协议的 Rust 实现参考
+[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr)。typeless-ibus
+只参考其协议交互，不复制、不打包也不执行其中的 Python 源码。
+
+该协议并非公开、稳定的商业 API，服务端行为可能变化。使用前请同时阅读
+[数据、隐私与风险](../privacy.md)与[第三方说明](../../THIRD_PARTY.md)。
 
 [返回供应商索引](README.md)

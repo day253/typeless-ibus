@@ -1,5 +1,7 @@
 # 故障排查
 
+[文档首页](README.md) · [使用与配置](usage.md) · [ASR 供应商](asr/README.md)
+
 以下命令中的系统安装路径是 `/usr/libexec/typeless-ibus-engine`。用户级安装时，请替换为
 `~/.local/libexec/typeless-ibus-engine`。
 

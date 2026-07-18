@@ -1,5 +1,7 @@
 # 安装与卸载
 
+[文档首页](README.md) · [发行版支持](distributions.md) · [使用与配置](usage.md)
+
 ## 系统要求
 
 - 支持 IBus 的 Linux 发行版

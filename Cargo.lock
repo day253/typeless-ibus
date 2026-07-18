@@ -2056,6 +2056,7 @@ dependencies = [
  "cpal",
  "futures-util",
  "http",
+ "libc",
  "md5",
  "opus",
  "prost",

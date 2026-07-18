@@ -1,5 +1,7 @@
 # OpenAI ASR
 
+[文档首页](../README.md) · [ASR 供应商](README.md) · OpenAI
+
 OpenAI 预设的 `provider` 为 `whisper`。名称是为兼容项目早期配置保留的；`model` 不限于
 `whisper-1`，也可以显式改成 OpenAI Audio Transcriptions 接口当前支持的其他转写模型。
 
@@ -44,7 +46,8 @@ OpenAI 预设的 `provider` 为 `whisper`。名称是为兼容项目早期配置
 ```
 
 默认 endpoint 是 `https://api.openai.com/v1/audio/transcriptions`，通常不需要填写。
-`language` 和 `prompt` 可选；使用非默认模型前请在官方
+省略 `language` 时，引擎会把系统推断出的 ISO-639-1 两字母代码作为提示；无法安全转换时
+省略并交给模型自动识别。显式 `language` 和 `prompt` 仍可覆盖；使用非默认模型前请在官方
 [模型目录](https://developers.openai.com/api/docs/models)确认它支持 Audio Transcriptions
 以及这些可选参数。
 

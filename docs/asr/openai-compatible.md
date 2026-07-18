@@ -1,5 +1,7 @@
 # OpenAI-compatible 云端 ASR
 
+[文档首页](../README.md) · [ASR 供应商](README.md) · OpenAI-compatible
+
 `openai-compatible` 用于没有专用预设、但实现 OpenAI Audio Transcriptions multipart
 协议的云端服务。目标接口必须接收 `file`、`model`，并返回至少包含
 `{ "text": "..." }` 的 JSON。
@@ -49,8 +51,9 @@
 }
 ```
 
-`endpoint` 必须是完整 URL。`language` 和 `prompt` 只有在目标服务声明支持时才保留；若
-目标服务不需要鉴权，删除 `apiKey` 整行以及相邻的多余逗号。
+`endpoint` 必须是完整 URL。为避免破坏只实现 `file + model` 的精简兼容接口，引擎不会
+根据系统自动添加 `language`；它和 `prompt` 只有在目标服务声明支持时才手动填写。若目标
+服务不需要鉴权，删除 `apiKey` 整行以及相邻的多余逗号。
 
 ## 验证
 

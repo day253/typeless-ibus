@@ -1,5 +1,7 @@
 # 开发与验证
 
+[文档首页](README.md) · [架构与设计](architecture.md) · [发行版支持](distributions.md)
+
 ## 本地检查
 
 ```bash

@@ -1,5 +1,8 @@
 # 使用与配置
 
+[文档首页](README.md) · [安装与卸载](installation.md) · [ASR 供应商](asr/README.md) ·
+[语种选择](languages.md)
+
 ## 基本使用
 
 1. 在桌面环境的输入源设置中添加 `typeless-ibus`；GNOME 用户可打开“设置 → 键盘 → 输入源”。
@@ -66,32 +69,7 @@
 每个供应商的控制台入口、凭据获取步骤、字段对应关系和可复制配置已经拆分为
 [独立配置文档](asr/README.md)。下面只说明通用字段和内置默认值。
 
-实现标准的 `audio/transcriptions` multipart 接口的服务可以这样配置：
-
-```json
-{
-  "triggerKey": "XF86_Fn",
-  "triggerMode": "hold",
-  "inputDevice": null,
-  "maxRecordingSeconds": 600,
-  "asr": {
-    "provider": "openai-compatible",
-    "endpoint": "https://example.com/v1/audio/transcriptions",
-    "apiKey": "your-api-key",
-    "model": "whisper-1",
-    "language": "zh",
-    "prompt": ""
-  }
-}
-```
-
-- `endpoint`：完整的音频转写 URL；未填写时使用 OpenAI 的标准转写地址。
-- `apiKey`：可选。云端网关需要鉴权时以 Bearer Token 发送；只有目标云端服务明确声明
-  不需要鉴权时才删除该字段。
-- `model`：可选，默认 `whisper-1`。
-- `language`、`prompt`：可选，空值不会发送。
-
-其他云端 provider 都带有默认 endpoint 和 model，通常只需要写供应商 ID 与凭据：
+所有需要鉴权的 provider 都可以从 `provider + apiKey` 开始。例如：
 
 ```json
 {
@@ -102,27 +80,11 @@
 }
 ```
 
-可用值与默认值：
-
-| `provider` | 默认 endpoint | 默认 model | 必需凭据 |
-| --- | --- | --- | --- |
-| `openai-compatible` | `https://api.openai.com/v1/audio/transcriptions` | `whisper-1` | 无；目标服务需要时填写 `apiKey` |
-| `whisper` | `https://api.openai.com/v1/audio/transcriptions` | `whisper-1` | `apiKey` |
-| `groq` | `https://api.groq.com/openai/v1/audio/transcriptions` | `whisper-large-v3-turbo` | `apiKey` |
-| `openrouter` | `https://openrouter.ai/api/v1/audio/transcriptions` | `openai/whisper-large-v3-turbo` | `apiKey` |
-| `siliconflow` | `https://api.siliconflow.cn/v1/audio/transcriptions` | `FunAudioLLM/SenseVoiceSmall` | `apiKey` |
-| `zhipu` | `https://open.bigmodel.cn/api/paas/v4/audio/transcriptions` | `glm-asr-2512` | `apiKey` |
-| `elevenlabs` | `https://api.elevenlabs.io/v1/speech-to-text` | `scribe_v2` | `apiKey` |
-| `xiaomi-mimo-asr` | `https://api.xiaomimimo.com/v1/chat/completions` | `mimo-v2.5-asr` | `apiKey` |
-| `bailian` | `wss://dashscope.aliyuncs.com/api-ws/v1/inference/` | `fun-asr-realtime` | `apiKey` |
-| `bailian-qwen3-realtime` | `wss://dashscope.aliyuncs.com/api-ws/v1/realtime` | `qwen3-asr-flash-realtime` | `apiKey` |
-| `bailian-fun-asr-flash` | DashScope multimodal-generation 标准地址 | `fun-asr-flash-2026-06-15` | `apiKey` |
-| `volcengine` | `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` | 服务端大模型 | `apiKey` |
-
-Qwen3 Realtime 可以填写 `language`，不填时自动识别。火山引擎新版控制台只需填写
-`apiKey`；可以用 `resourceId` 覆盖默认值
-`volc.seedasr.sauc.duration`。所有 provider 都允许用 `endpoint`、`model` 覆盖默认值
-（火山引擎没有客户端 model 字段）。
+`endpoint`、`model`、`language`、`prompt` 和 `resourceId` 都由各 provider 的 Rust 实现
+提供默认值或省略行为，只在需要覆盖时填写。每个 provider 真正支持的字段、内置默认值、
+最小配置和最大配置统一维护在 [ASR 供应商配置索引](asr/README.md)，本页不重复维护清单。
+其中 `language` 默认结合系统 locale 与时区推断，再按 provider 能力发送或回退；详见
+[语种选择与回退](languages.md)。
 
 ASR 供应商只由配置文件决定，不从环境变量或残留凭据推断。配置文件权限为 `0600`，但
 `apiKey` 仍是明文保存；使用自建 endpoint 时也应确认网络可信。

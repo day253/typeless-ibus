@@ -26,6 +26,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The product website now presents the supported cloud ASR providers and a prominent typeless logo.
 - Every cloud provider now accepts a minimal `provider + apiKey` configuration and resolves all
   other supported fields through runtime defaults; the unused `vocabularyId` field was removed.
+- Documentation is now organized by user task, and the default protocol implementation reference
+  lives with the `doubao` provider documentation instead of the product overview.
+- Speech language defaults now follow the system locale and time zone, prefer Chinese for an
+  English-default system in a China time zone, and omit hints for providers that cannot accept them.
 
 ## [0.5.3] - 2026-07-18
 

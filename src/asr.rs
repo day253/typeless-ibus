@@ -24,6 +24,7 @@ use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use typeless_ibus::config::{AsrConfig, AsrProviderKind};
+use typeless_ibus::system_preferences::SystemPreferences;
 use uuid::Uuid;
 
 use self::bailian_realtime::BailianRealtimeProvider;
@@ -103,6 +104,19 @@ fn configured_provider(
 
 pub async fn diagnose(config: &AsrConfig, credentials_path: &Path) -> Result<()> {
     let provider = configured_provider(config, credentials_path)?;
+    let preferences = SystemPreferences::current();
+    println!(
+        "asr.system_locale: {}",
+        preferences.locale().unwrap_or("unknown")
+    );
+    println!(
+        "asr.system_time_zone: {}",
+        preferences.time_zone().unwrap_or("unknown")
+    );
+    println!(
+        "asr.system_speech_language: {}",
+        preferences.speech_language()
+    );
     tracing::info!(
         provider = provider.kind().as_str(),
         "diagnosing ASR provider"
@@ -1128,6 +1142,7 @@ async fn register_device(client: &reqwest::Client) -> Result<DeviceCredentials> 
     let clientudid = Uuid::new_v4().to_string();
     let openudid = Uuid::new_v4().simple().to_string()[..16].to_string();
     let now = unix_time_ms();
+    let device_locale = DeviceLocale::from_preferences(&SystemPreferences::current());
     let header = json!({
         "device_id": 0,
         "install_id": 0,
@@ -1148,8 +1163,8 @@ async fn register_device(client: &reqwest::Client) -> Result<DeviceCredentials> 
         "device_model": "Pixel 7 Pro",
         "resolution": "1080*2400",
         "dpi": "420",
-        "language": "zh",
-        "timezone": 8,
+        "language": device_locale.language.clone(),
+        "timezone": device_locale.timezone_hours,
         "access": "wifi",
         "rom": "UP1A.231005.007",
         "rom_version": "UP1A.231005.007",
@@ -1157,8 +1172,8 @@ async fn register_device(client: &reqwest::Client) -> Result<DeviceCredentials> 
         "clientudid": clientudid,
         "cdid": cdid,
         "region": "CN",
-        "tz_name": "Asia/Shanghai",
-        "tz_offset": 28800,
+        "tz_name": device_locale.time_zone.clone(),
+        "tz_offset": device_locale.utc_offset_seconds,
         "sim_region": "cn",
         "carrier_region": "cn",
         "cpu_abi": "arm64-v8a",
@@ -1187,7 +1202,7 @@ async fn register_device(client: &reqwest::Client) -> Result<DeviceCredentials> 
         ("dpi", "420".to_string()),
         ("device_type", "Pixel 7 Pro".to_string()),
         ("device_brand", "google".to_string()),
-        ("language", "zh".to_string()),
+        ("language", device_locale.language.clone()),
         ("os_api", "34".to_string()),
         ("os_version", "16".to_string()),
         ("ac", "wifi".to_string()),
@@ -1214,6 +1229,26 @@ async fn register_device(client: &reqwest::Client) -> Result<DeviceCredentials> 
         clientudid,
         token: String::new(),
     })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DeviceLocale {
+    language: String,
+    time_zone: String,
+    timezone_hours: i32,
+    utc_offset_seconds: i32,
+}
+
+impl DeviceLocale {
+    fn from_preferences(preferences: &SystemPreferences) -> Self {
+        let utc_offset_seconds = preferences.utc_offset_seconds();
+        Self {
+            language: preferences.speech_language().to_string(),
+            time_zone: preferences.time_zone().unwrap_or("UTC").to_string(),
+            timezone_hours: utc_offset_seconds / 3_600,
+            utc_offset_seconds,
+        }
+    }
 }
 
 async fn get_asr_token(client: &reqwest::Client, device_id: &str, cdid: &str) -> Result<String> {
@@ -1272,6 +1307,17 @@ fn unix_time_ms() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn doubao_registration_uses_system_language_and_time_zone() {
+        let preferences =
+            SystemPreferences::from_parts(Some("en_US.UTF-8"), Some("Asia/Shanghai"), 28_800);
+        let locale = DeviceLocale::from_preferences(&preferences);
+        assert_eq!(locale.language, "zh");
+        assert_eq!(locale.time_zone, "Asia/Shanghai");
+        assert_eq!(locale.timezone_hours, 8);
+        assert_eq!(locale.utc_offset_seconds, 28_800);
+    }
 
     #[test]
     fn parses_partial_and_final_results() {

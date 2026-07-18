@@ -1,5 +1,7 @@
 # SiliconFlow（硅基流动）ASR
 
+[文档首页](../README.md) · [ASR 供应商](README.md) · SiliconFlow
+
 SiliconFlow 预设的 `provider` 为 `siliconflow`，使用 Audio Transcriptions multipart
 接口。中国站默认 endpoint 是 `https://api.siliconflow.cn/v1/audio/transcriptions`，默认
 模型是 `FunAudioLLM/SenseVoiceSmall`。
@@ -44,7 +46,7 @@ SiliconFlow 预设的 `provider` 为 `siliconflow`，使用 Audio Transcriptions
 
 Key、endpoint 和模型必须属于同一站点；不要混用 `.cn` Key 与 `.com` endpoint。模型下线
 或改名时，从控制台模型列表复制新的音频转写 model ID。`language` 和 `prompt` 只有在所选
-模型声明支持时才保留。
+模型声明支持时才保留；为避免不同模型字段不兼容，引擎不会自动添加系统语种。
 
 ## 验证
 

@@ -1,5 +1,7 @@
 # ASR 供应商
 
+[文档首页](README.md) · [供应商配置](asr/README.md) · [语种选择](languages.md)
+
 账号开通、凭据获取、可复制 JSON 和真实音频验证命令见
 [ASR 供应商配置索引](asr/README.md)。该索引按供应商拆分为独立文档；本页只说明协议
 范围与实现边界。

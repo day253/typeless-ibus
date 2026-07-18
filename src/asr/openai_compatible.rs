@@ -68,7 +68,7 @@ impl OpenaiCompatibleProvider {
             .part("file", file)
             .text("model", self.config.model().to_string());
         if let Some(language) = self.config.language() {
-            form = form.text("language", language.to_string());
+            form = form.text("language", language);
         }
         if let Some(prompt) = self.config.prompt() {
             form = form.text("prompt", prompt.to_string());

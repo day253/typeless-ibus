@@ -154,6 +154,16 @@ pub(crate) fn print_diagnosis(config: &AsrConfig, authentication: &str) -> Resul
     if !config.model().is_empty() {
         println!("asr.model: {}", config.model());
     }
+    if let Some(language) = config.language() {
+        let source = if config.configured_language().is_some() {
+            "configuration"
+        } else {
+            "system locale/time zone"
+        };
+        println!("asr.language: {language} ({source})");
+    } else {
+        println!("asr.language: provider auto-detect");
+    }
     println!("asr.authentication: {authentication}");
     println!("asr.diagnosis: configuration is valid; use --check-asr-audio to test recognition");
     Ok(())

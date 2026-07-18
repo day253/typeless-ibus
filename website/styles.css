@@ -1365,6 +1365,16 @@ main {
   box-shadow: 0 11px 24px rgba(54, 30, 72, 0.055);
   transform: rotate(-1.2deg);
 }
+.provider-chip:is(a) {
+  color: inherit;
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.provider-chip:is(a):hover {
+  border-color: rgba(201, 255, 68, 0.72);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+  transform: translateY(-3px) rotate(-1deg);
+}
 
 .provider-chip:nth-child(2n) { transform: translateY(8px) rotate(1deg); }
 .provider-chip:nth-child(3n) { transform: translateY(-5px) rotate(-2deg); }

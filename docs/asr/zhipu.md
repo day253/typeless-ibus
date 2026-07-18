@@ -1,5 +1,7 @@
 # 智谱 AI ASR
 
+[文档首页](../README.md) · [ASR 供应商](README.md) · 智谱 AI
+
 智谱预设的 `provider` 为 `zhipu`，默认模型是 `glm-asr-2512`，通过 multipart HTTP
 上传 WAV。由于官方接口限制，typeless-ibus 会把长录音按 30 秒切片再合并结果。
 
@@ -40,7 +42,8 @@
 ```
 
 一般不需要填写 `endpoint` 或 `model`。`language` 和 `prompt` 只有在当前模型接口声明支持时
-才保留；不要把编码套餐的专属文本 endpoint 用于 ASR。
+才保留；引擎不会对智谱预设自动添加系统语种。不要把编码套餐的专属文本 endpoint 用于
+ASR。
 
 ## 验证
 

@@ -1,5 +1,7 @@
 # 发行版支持范围
 
+[文档首页](README.md) · [安装与卸载](installation.md) · [开发与验证](development.md)
+
 typeless-ibus 的运行条件是 Linux、IBus 1.5.22 或更高版本，以及可用的 ALSA 输入设备。
 项目只实现一个 Rust IBus 引擎；GTK、Qt、XIM 和 Wayland 应用由发行版提供的 IBus
 集成模块覆盖。GNOME Wayland 是主要桌面验证环境，但产品不限定 Ubuntu 或 GNOME。

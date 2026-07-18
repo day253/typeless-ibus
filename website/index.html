@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="typeless-ibus 是面向 Linux 的原生 IBus 语音输入法。按住、说话、松开，支持豆包、OpenAI、Groq、百炼、火山引擎等云端 ASR。"
+      content="typeless-ibus 是面向 Linux 的原生 IBus 语音输入法。自定义触发键，按住、说话、松开，支持豆包、OpenAI、Groq、百炼、火山引擎等云端 ASR。"
     />
     <meta name="theme-color" content="#17111f" />
     <meta property="og:title" content="typeless-ibus — 说出来，文字就到了" />
     <meta
       property="og:description"
-      content="Ubuntu 与 Linux 上轻量、原生的 IBus 语音输入体验，支持 10+ 云端 ASR 供应商。"
+      content="Ubuntu 与 Linux 上轻量、原生的 IBus 语音输入体验，支持自定义触发键和 10+ 云端 ASR 供应商。"
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://day253.github.io/typeless-ibus/" />
@@ -35,7 +35,7 @@
       </nav>
       <div class="header-actions">
         <button class="language-toggle" type="button" aria-label="Switch to English">
-          <span class="language-current">中</span><span aria-hidden="true"> / </span><span>EN</span>
+          <span class="language-current">中</span><span aria-hidden="true"> / </span><span class="language-alternate">EN</span>
         </button>
         <a
           class="github-link"
@@ -54,7 +54,7 @@
           <p class="eyebrow"><span></span><span data-i18n="heroEyebrow">Linux 原生 · IBus · Wayland</span></p>
           <h1 data-i18n="heroTitle">说出来，<br /><em>文字就到了。</em></h1>
           <p class="hero-lede" data-i18n="heroLede">
-            按住一个键，开口说，松开。语音直接变成当前应用里的文字，像输入法本来就该有的能力。
+            按住你设定的触发键，开口说，松开。语音直接变成当前应用里的文字，像输入法本来就该有的能力。
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="https://github.com/day253/typeless-ibus/releases/latest">
@@ -67,7 +67,7 @@
           <ul class="hero-facts" aria-label="产品特点">
             <li><span aria-hidden="true">◆</span> Rust</li>
             <li><span aria-hidden="true">◆</span> <span data-i18n="manyProviders">10+ 云端 ASR</span></li>
-            <li><span aria-hidden="true">◆</span> <span data-i18n="noClipboard">无剪贴板注入</span></li>
+            <li><span aria-hidden="true">◆</span> <span data-i18n="customTrigger">触发键可自定义</span></li>
           </ul>
         </div>
 
@@ -183,7 +183,7 @@
             </div>
             <div class="hold-control">
               <button class="fn-key" type="button" aria-describedby="hold-hint"><span>Fn</span><small data-i18n="hold">按住</small></button>
-              <p id="hold-hint" data-i18n="holdHint">也可以按住这里试一试</p>
+              <p id="hold-hint" data-i18n="holdHint">默认 Fn，也可改成 Ctrl、F8、F9、F10 或空格</p>
             </div>
             <div class="stage-dots" aria-label="演示进度">
               <button class="active" type="button" data-stage-target="0" aria-label="步骤 1"></button>
@@ -199,8 +199,8 @@
               <p data-i18n="stepOneBody">聊天、浏览器、笔记或终端。Typeless 是输入法，不挑应用。</p>
             </article>
             <article class="story-step" data-stage="1">
-              <span>02</span><h3 data-i18n="stepTwoTitle">按住 Fn，开始说</h3>
-              <p data-i18n="stepTwoBody">轻巧的“聆听中…”告诉你它已经准备好，不用寻找录音窗口。</p>
+              <span>02</span><h3 data-i18n="stepTwoTitle">按住你的触发键，开始说</h3>
+              <p data-i18n="stepTwoBody">默认是 Fn，也能改成左右 Ctrl、F8、F9、F10 或空格；“聆听中…”会告诉你它已准备好。</p>
             </article>
             <article class="story-step" data-stage="2">
               <span>03</span><h3 data-i18n="stepThreeTitle">文字跟着声音生长</h3>
@@ -252,18 +252,21 @@
             <p class="eyebrow"><span></span><span data-i18n="providersEyebrow">声音由你选择</span></p>
             <h2 data-i18n="providersTitle">开箱即用，<br />也不被一家服务绑定。</h2>
             <p data-i18n="providersBody">
-              默认豆包无需配置；需要自己的模型、额度或数据区域时，只改一个 JSON，就能切换到熟悉的云端 ASR。
+              默认豆包无需配置；语种会结合系统语言与时区选择，不支持提示的 provider 自动交给模型检测。需要自己的模型、额度或数据区域时，只改一个 JSON 即可切换。
             </p>
             <a
               class="provider-doc-link"
               href="https://github.com/day253/typeless-ibus/blob/main/docs/asr/README.md"
             >
-              <span data-i18n="providersGuide">查看各供应商配置</span><span aria-hidden="true">↗</span>
+              <span data-i18n="providersGuide">查看供应商与语种配置</span><span aria-hidden="true">↗</span>
             </a>
           </div>
 
           <div class="provider-cloud reveal" aria-label="支持的云端 ASR 供应商">
-            <span class="provider-chip provider-default"><b>豆包</b><small data-i18n="providerDefault">默认 · 零配置</small></span>
+            <a
+              class="provider-chip provider-default"
+              href="https://github.com/day253/typeless-ibus/blob/main/docs/asr/doubao.md"
+            ><b>豆包</b><small data-i18n="providerDefault">默认 · 零配置</small></a>
             <span class="provider-chip"><b>OpenAI</b><small>Whisper</small></span>
             <span class="provider-chip"><b>Groq</b><small>Whisper</small></span>
             <span class="provider-chip"><b>OpenRouter</b><small>Audio API</small></span>

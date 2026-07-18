@@ -46,23 +46,10 @@ Wayland applications. The project does not ship separate frontends or Fcitx5 sup
 not include Windows or macOS clients, LLM rewriting, accounts, cloud quotas, history, or dictionary
 features.
 
-The default speech protocol implementation references
-[`yangmoling/doubaoime-asr`](https://github.com/yangmoling/doubaoime-asr).
-
 ## Documentation
 
-Detailed documentation is currently maintained in Chinese:
-
-- [Installation and removal](docs/installation.md)
-- [Distribution support](docs/distributions.md)
-- [Usage and configuration](docs/usage.md)
-- [Per-provider ASR configuration](docs/asr/README.md)
-- [Architecture and design](docs/architecture.md)
-- [ASR providers and extension design](docs/asr-providers.md)
-- [Development and validation](docs/development.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Data, privacy, and risks](docs/privacy.md)
-- [Documentation index](docs/README.md)
-- [Changelog](CHANGELOG.md)
+Detailed documentation is maintained in Chinese. Start with the [documentation index](docs/README.md)
+for installation, usage, provider configuration, troubleshooting, architecture, and development.
+Release changes are recorded in the [changelog](CHANGELOG.md).
 
 This project is released under the [MIT License](LICENSE).

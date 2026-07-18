@@ -213,8 +213,9 @@ impl BailianRealtimeProvider {
             request_id = request_id.as_deref().unwrap_or("missing"),
             "connected to ASR provider"
         );
+        let language = self.config.language();
         socket
-            .send(Message::Text(qwen_session_update(self.config.language())))
+            .send(Message::Text(qwen_session_update(language.as_deref())))
             .await
             .context("发送百炼 Qwen3 session.update 失败")?;
 

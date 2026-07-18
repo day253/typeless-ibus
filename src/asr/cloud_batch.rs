@@ -97,7 +97,7 @@ impl CloudBatchProvider {
             .text("tag_audio_events", "false")
             .text("timestamps_granularity", "none");
         if let Some(language) = self.config.language() {
-            form = form.text("language_code", language.to_string());
+            form = form.text("language_code", language);
         }
         let response = self
             .client

@@ -1,5 +1,7 @@
 # Groq ASR
 
+[文档首页](../README.md) · [ASR 供应商](README.md) · Groq
+
 Groq 预设的 `provider` 为 `groq`，使用兼容 OpenAI Audio Transcriptions 的 multipart
 接口。默认模型是 `whisper-large-v3-turbo`。
 
@@ -41,8 +43,9 @@ Groq 预设的 `provider` 为 `groq`，使用兼容 OpenAI Audio Transcriptions 
 }
 ```
 
-默认 model 是 `whisper-large-v3-turbo`。`language` 使用 ISO-639-1 代码；已知语言时填写
-可减少识别延迟。覆盖模型时应从官方列表复制准确 ID。
+默认 model 是 `whisper-large-v3-turbo`。未填写时，引擎自动发送系统推断出的 ISO-639-1
+两字母代码；无法安全转换时省略并交给 Groq 自动识别。显式 `language` 可以覆盖默认提示。
+覆盖模型时应从官方列表复制准确 ID。
 
 ## 验证
 

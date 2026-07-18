@@ -6,11 +6,11 @@ const translations = {
     navSupport: "支持",
     heroEyebrow: "Linux 原生 · IBus · Wayland",
     heroTitle: "说出来，<br><em>文字就到了。</em>",
-    heroLede: "按住一个键，开口说，松开。语音直接变成当前应用里的文字，像输入法本来就该有的能力。",
+    heroLede: "按住你设定的触发键，开口说，松开。语音直接变成当前应用里的文字，像输入法本来就该有的能力。",
     download: "下载 v@TYPELESS_VERSION@",
     seeDemo: "看看怎么用",
     manyProviders: "10+ 云端 ASR",
-    noClipboard: "无剪贴板注入",
+    customTrigger: "触发键可自定义",
     desktopActivities: "活动",
     notesTitle: "今天的笔记",
     noteDate: "星期六 · 7月18日",
@@ -25,11 +25,11 @@ const translations = {
     messageTwo: "好呀，我安排一下时间。",
     ready: "准备好了",
     hold: "按住",
-    holdHint: "也可以按住这里试一试",
+    holdHint: "默认 Fn，也可改成 Ctrl、F8、F9、F10 或空格",
     stepOneTitle: "光标放在任何输入框",
     stepOneBody: "聊天、浏览器、笔记或终端。Typeless 是输入法，不挑应用。",
-    stepTwoTitle: "按住 Fn，开始说",
-    stepTwoBody: "轻巧的“聆听中…”告诉你它已经准备好，不用寻找录音窗口。",
+    stepTwoTitle: "按住你的触发键，开始说",
+    stepTwoBody: "默认是 Fn，也能改成左右 Ctrl、F8、F9、F10 或空格；“聆听中…”会告诉你它已准备好。",
     stepThreeTitle: "文字跟着声音生长",
     stepThreeBody: "识别结果以原生 IBus 预编辑文本出现，长句和停顿也不会丢掉前文。",
     stepFourTitle: "松开，直接写入",
@@ -45,8 +45,8 @@ const translations = {
     directBody: "不读取和覆盖剪贴板，不注入快捷键；音频仅用于实时语音识别。",
     providersEyebrow: "声音由你选择",
     providersTitle: "开箱即用，<br>也不被一家服务绑定。",
-    providersBody: "默认豆包无需配置；需要自己的模型、额度或数据区域时，只改一个 JSON，就能切换到熟悉的云端 ASR。",
-    providersGuide: "查看各供应商配置",
+    providersBody: "默认豆包无需配置；语种会结合系统语言与时区选择，不支持提示的 provider 自动交给模型检测。需要自己的模型、额度或数据区域时，只改一个 JSON 即可切换。",
+    providersGuide: "查看供应商与语种配置",
     providerDefault: "默认 · 零配置",
     providerApiKey: "新版 API Key",
     providerCompatible: "自定义接口",
@@ -75,11 +75,11 @@ const translations = {
     navSupport: "Support",
     heroEyebrow: "Native Linux · IBus · Wayland",
     heroTitle: "Say it.<br><em>There’s your text.</em>",
-    heroLede: "Hold a key, speak, and release. Your voice becomes text in the app you are already using—just like an input method should.",
+    heroLede: "Hold your chosen trigger key, speak, and release. Your voice becomes text in the app you are already using—just like an input method should.",
     download: "Download v@TYPELESS_VERSION@",
     seeDemo: "See how it feels",
     manyProviders: "10+ cloud ASR options",
-    noClipboard: "No clipboard injection",
+    customTrigger: "Custom trigger keys",
     desktopActivities: "Activities",
     notesTitle: "Today’s notes",
     noteDate: "Saturday · July 18",
@@ -94,11 +94,11 @@ const translations = {
     messageTwo: "Sounds good. I’ll check my schedule.",
     ready: "Ready",
     hold: "Hold",
-    holdHint: "Or press and hold here to try it",
+    holdHint: "Fn by default; choose Ctrl, F8, F9, F10, or Space instead",
     stepOneTitle: "Focus any text field",
     stepOneBody: "Chat, browser, notes, or terminal. Typeless is an input method, so it works across apps.",
-    stepTwoTitle: "Hold Fn and start talking",
-    stepTwoBody: "A quiet “Listening…” tells you it is ready. There is no recorder window to find.",
+    stepTwoTitle: "Hold your trigger key and talk",
+    stepTwoBody: "Fn is the default, or choose left/right Ctrl, F8, F9, F10, or Space. A quiet “Listening…” confirms it is ready.",
     stepThreeTitle: "Text grows with your voice",
     stepThreeBody: "Results appear as native IBus preedit text. Long sentences and pauses keep their earlier words.",
     stepFourTitle: "Release to write",
@@ -114,8 +114,8 @@ const translations = {
     directBody: "Never reads or replaces your clipboard and never injects shortcuts. Audio is used only for live ASR.",
     providersEyebrow: "Your voice, your provider",
     providersTitle: "Ready out of the box.<br>Never locked to one cloud.",
-    providersBody: "Doubao works with zero setup. When you need your own model, quota, or data region, one JSON setting switches to the cloud ASR you already use.",
-    providersGuide: "Open provider setup guides",
+    providersBody: "Doubao works with zero setup. Speech language follows system locale and time zone; providers without hint support fall back to model detection. One JSON setting can still switch your model, quota, or data region.",
+    providersGuide: "Open provider and language guides",
     providerDefault: "default · zero setup",
     providerApiKey: "latest API Key auth",
     providerCompatible: "custom endpoint",
@@ -142,6 +142,7 @@ const translations = {
 const htmlTranslationKeys = new Set(["heroTitle", "storyTitle", "providersTitle", "supportTitle"]);
 const languageButton = document.querySelector(".language-toggle");
 const languageCurrent = document.querySelector(".language-current");
+const languageAlternate = document.querySelector(".language-alternate");
 const storyDesktop = document.querySelector(".story-desktop");
 const storySteps = [...document.querySelectorAll(".story-step")];
 const stageDots = [...document.querySelectorAll("[data-stage-target]")];
@@ -178,6 +179,7 @@ function applyLanguage(language) {
   });
 
   languageCurrent.textContent = language === "zh" ? "中" : "EN";
+  languageAlternate.textContent = language === "zh" ? "EN" : "中";
   languageButton.setAttribute("aria-label", language === "zh" ? "Switch to English" : "切换到中文");
   localStorage.setItem("typeless-language", language);
   renderStage(currentStage);

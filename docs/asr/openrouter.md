@@ -1,5 +1,7 @@
 # OpenRouter ASR
 
+[文档首页](../README.md) · [ASR 供应商](README.md) · OpenRouter
+
 OpenRouter 预设的 `provider` 为 `openrouter`。它使用专用 Speech-to-Text JSON 接口，音频
 以 base64 WAV 发送；不要改成 `openai-compatible`。
 

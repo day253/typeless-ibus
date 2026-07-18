@@ -1,3 +1,4 @@
+use crate::system_preferences::SystemPreferences;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -112,8 +113,24 @@ impl AsrProviderKind {
         }
     }
 
-    pub const fn default_language(self) -> Option<&'static str> {
-        None
+    pub const fn accepts_language_configuration(self) -> bool {
+        matches!(
+            self,
+            Self::OpenaiCompatible
+                | Self::Whisper
+                | Self::Groq
+                | Self::Siliconflow
+                | Self::Zhipu
+                | Self::Elevenlabs
+                | Self::BailianQwen3Realtime
+        )
+    }
+
+    pub const fn uses_system_language_hint(self) -> bool {
+        matches!(
+            self,
+            Self::Whisper | Self::Groq | Self::Elevenlabs | Self::BailianQwen3Realtime
+        )
     }
 
     pub const fn default_prompt(self) -> Option<&'static str> {
@@ -211,8 +228,12 @@ impl AsrConfig {
         non_empty(self.api_key.as_deref())
     }
 
-    pub fn language(&self) -> Option<&str> {
-        non_empty(self.language.as_deref()).or_else(|| self.provider.default_language())
+    pub fn configured_language(&self) -> Option<&str> {
+        non_empty(self.language.as_deref())
+    }
+
+    pub fn language(&self) -> Option<String> {
+        self.language_with_preferences(&SystemPreferences::current())
     }
 
     pub fn prompt(&self) -> Option<&str> {
@@ -226,6 +247,12 @@ impl AsrConfig {
     }
 
     pub fn validate(&self) -> Result<()> {
+        if self.configured_language().is_some() && !self.provider.accepts_language_configuration() {
+            bail!(
+                "{} 不支持 asr.language；请删除该字段并使用服务端自动识别",
+                self.provider.as_str()
+            );
+        }
         if self.provider != AsrProviderKind::Doubao {
             let endpoint =
                 reqwest::Url::parse(self.endpoint()).context("asr.endpoint 必须是有效的 URL")?;
@@ -251,7 +278,34 @@ impl AsrConfig {
         }
         Ok(())
     }
+
+    fn language_with_preferences(&self, preferences: &SystemPreferences) -> Option<String> {
+        if let Some(language) = self.configured_language() {
+            return Some(language.to_string());
+        }
+        if !self.provider.uses_system_language_hint() {
+            return None;
+        }
+        let language = preferences.speech_language();
+        match self.provider {
+            AsrProviderKind::Whisper | AsrProviderKind::Groq => {
+                (language.len() == 2).then(|| language.to_string())
+            }
+            AsrProviderKind::Elevenlabs => {
+                ((2..=3).contains(&language.len())).then(|| language.to_string())
+            }
+            AsrProviderKind::BailianQwen3Realtime => QWEN_ASR_LANGUAGES
+                .contains(&language)
+                .then(|| language.to_string()),
+            _ => None,
+        }
+    }
 }
+
+const QWEN_ASR_LANGUAGES: &[&str] = &[
+    "zh", "yue", "en", "ja", "de", "ko", "ru", "fr", "pt", "ar", "it", "es", "hi", "id", "th",
+    "tr", "uk", "vi", "cs", "da", "fil", "fi", "is", "ms", "no", "pl", "sv",
+];
 
 fn non_empty(value: Option<&str>) -> Option<&str> {
     value.map(str::trim).filter(|value| !value.is_empty())
@@ -566,6 +620,8 @@ mod tests {
 
     #[test]
     fn every_provider_accepts_minimal_configuration_and_resolves_defaults() {
+        let preferences =
+            SystemPreferences::from_parts(Some("en_US.UTF-8"), Some("America/New_York"), -18_000);
         for provider in AsrProviderKind::ALL {
             let config = AsrConfig {
                 provider,
@@ -583,7 +639,15 @@ mod tests {
                     assert!(!config.model().is_empty(), "{}", provider.as_str());
                 }
             }
-            assert_eq!(config.language(), None, "{}", provider.as_str());
+            let expected_language = provider
+                .uses_system_language_hint()
+                .then(|| "en".to_string());
+            assert_eq!(
+                config.language_with_preferences(&preferences),
+                expected_language,
+                "{}",
+                provider.as_str()
+            );
             assert_eq!(config.prompt(), None, "{}", provider.as_str());
             if provider == AsrProviderKind::Volcengine {
                 assert_eq!(config.resource_id(), "volc.seedasr.sauc.duration");
@@ -591,6 +655,41 @@ mod tests {
                 assert_eq!(config.resource_id(), "");
             }
         }
+    }
+
+    #[test]
+    fn speech_language_prefers_config_then_locale_and_china_time_zone() {
+        let china =
+            SystemPreferences::from_parts(Some("en_US.UTF-8"), Some("Asia/Shanghai"), 28_800);
+        let mut config = AsrConfig {
+            provider: AsrProviderKind::Whisper,
+            api_key: Some("key".to_string()),
+            ..AsrConfig::default()
+        };
+        assert_eq!(config.language_with_preferences(&china), Some("zh".into()));
+
+        config.language = Some("fr".to_string());
+        assert_eq!(config.language_with_preferences(&china), Some("fr".into()));
+    }
+
+    #[test]
+    fn unsupported_language_hints_fall_back_to_provider_detection() {
+        let preferences =
+            SystemPreferences::from_parts(Some("nl_NL.UTF-8"), Some("Europe/Amsterdam"), 7_200);
+        let qwen = AsrConfig {
+            provider: AsrProviderKind::BailianQwen3Realtime,
+            api_key: Some("key".to_string()),
+            ..AsrConfig::default()
+        };
+        assert_eq!(qwen.language_with_preferences(&preferences), None);
+
+        let openrouter = AsrConfig {
+            provider: AsrProviderKind::Openrouter,
+            api_key: Some("key".to_string()),
+            language: Some("en".to_string()),
+            ..AsrConfig::default()
+        };
+        assert!(openrouter.validate().is_err());
     }
 
     #[test]

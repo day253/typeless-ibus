@@ -1,5 +1,7 @@
 # ElevenLabs ASR
 
+[文档首页](../README.md) · [ASR 供应商](README.md) · ElevenLabs
+
 ElevenLabs 预设的 `provider` 为 `elevenlabs`，使用 Speech-to-Text multipart 接口，默认
 模型是 `scribe_v2`。
 
@@ -44,6 +46,9 @@ ElevenLabs 预设的 `provider` 为 `elevenlabs`，使用 Speech-to-Text multipa
   }
 }
 ```
+
+省略 `language` 时，引擎会自动发送系统推断出的 ISO-639-1/639-3 代码；如果没有可用代码，
+则不发送并使用 Scribe 的语言预测。
 
 引擎会以 `xi-api-key` 请求头发送配置中的 `apiKey`，无需用户手动添加前缀。
 
