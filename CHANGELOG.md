@@ -16,6 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Provider-specific endpoint, model, API key, resource, language, and prompt configuration fields.
 - Local mock coverage for every HTTP and WebSocket wire protocol, plus configuration compatibility,
   provider routing, WAV encoding, long-audio splitting, and request ID handling.
+- Daily local JSONL logs with seven-file retention, final recognition transcripts, per-session UUIDs,
+  request correlation, and the application context exposed by IBus without storing recorded audio.
 
 ### Changed
 

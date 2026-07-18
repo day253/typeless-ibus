@@ -42,6 +42,7 @@ src/asr/volcengine.rs            火山引擎流式客户端
 src/asr/volcengine_frame.rs      火山引擎二进制帧编解码
 src/asr/shared.rs                PCM、WAV、切片、请求 ID 与脱敏工具
 src/config.rs     JSON 配置、共享状态、按键解析与本地路径
+src/logging.rs    JSONL 本地日志、按天轮转、保留策略与文件权限
 src/properties.rs IBus 原生配置菜单与菜单操作解析
 ```
 
@@ -75,6 +76,12 @@ IBus 引擎只依赖统一的 `AsrProvider` trait：输入是 16 kHz 单声道 s
 每次识别最多自动恢复一次，其他错误不会触发凭据轮换。
 
 ## 可观测性
+
+每次语音输入生成 UUID `session_id`。识别任务在同名 tracing span 中运行，使 Provider
+建联、请求 ID、错误和最终提交可以关联。`voice_session.started` 快照记录当时可用的 IBus
+客户端、输入上下文、光标矩形、内容类型与能力；`voice_session.finished` 记录状态、耗时和
+最终识别文本。旧客户端若只调用 `FocusIn` 而不调用 `FocusInId`，客户端和输入上下文会
+明确记录为 `unknown`。
 
 豆包 WebSocket 建联后读取 `x-tt-logid`。其他云端接口按响应读取 `x-request-id`、
 `request-id`、`x-trace-id`、`x-tt-logid` 或 `x-api-request-id`；DashScope JSON 的

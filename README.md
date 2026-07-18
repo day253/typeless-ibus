@@ -27,6 +27,8 @@ already using.
   and openSUSE Tumbleweed; Arch Linux is protocol-tested; Nix covers both Linux architectures.
 - **Automatic recovery**: rejected Doubao service-discovery credentials are refreshed while the
   current audio is replayed.
+- **Local recognition logs**: daily structured logs retain final transcripts and available IBus app
+  context without saving recorded audio.
 
 ## How it feels
 
@@ -43,8 +45,8 @@ Press `Esc` to cancel the active recording or recognition session.
 The current release targets Linux distributions with IBus 1.5.22 or newer. IBus remains the only
 input-method backend; integrations supplied by each distribution connect it to GTK, Qt, XIM, and
 Wayland applications. The project does not ship separate frontends or Fcitx5 support. It also does
-not include Windows or macOS clients, LLM rewriting, accounts, cloud quotas, history, or dictionary
-features.
+not include Windows or macOS clients, LLM rewriting, accounts, cloud quotas, cloud history sync, or
+dictionary features. See the [logging guide](docs/logging.md) for local retention and privacy details.
 
 ## Documentation
 

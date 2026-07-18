@@ -4,23 +4,29 @@ mod ibus;
 
 use anyhow::{Context, Result, bail};
 use std::path::Path;
+use std::process::ExitCode;
 use typeless_ibus::config::{AsrProviderKind, Config, ConfigStore, TriggerMode};
-use typeless_ibus::{audio, config, i18n, properties};
+use typeless_ibus::{audio, config, i18n, logging, properties};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
-async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "typeless_ibus=info,typeless_ibus_engine=info".into()),
-        )
-        .init();
+async fn main() -> ExitCode {
+    let _logging_guard = match logging::init() {
+        Ok(guard) => guard,
+        Err(error) => {
+            eprintln!("typeless-ibus: {error:#}");
+            return ExitCode::FAILURE;
+        }
+    };
 
-    if let Err(error) = run().await {
-        eprintln!("typeless-ibus: {error:#}");
-        std::process::exit(1);
+    match run().await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            tracing::error!(error = %format_args!("{error:#}"), "typeless-ibus stopped with an error");
+            eprintln!("typeless-ibus: {error:#}");
+            ExitCode::FAILURE
+        }
     }
 }
 
@@ -38,6 +44,10 @@ async fn run() -> Result<()> {
         }
         Some("--config-path") => {
             println!("{}", config::config_path()?.display());
+            return Ok(());
+        }
+        Some("--log-path") => {
+            println!("{}", logging::latest_log_path()?.display());
             return Ok(());
         }
         Some("--print-config") => {
@@ -249,6 +259,7 @@ fn print_help() {
            --check-asr-audio PATH  Recognize a 16 kHz mono s16le PCM fixture\n\
            --list-devices          List microphone devices\n\
            --config-path           Print configuration path\n\
+           --log-path              Print the latest local log path\n\
            --print-config          Print the effective configuration\n\
            --write-default-config  Replace configuration with defaults\n\
            -V, --version           Print version\n\

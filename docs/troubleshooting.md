@@ -14,6 +14,16 @@
 /usr/libexec/typeless-ibus-engine --check
 ```
 
+## 查看本地日志
+
+```bash
+/usr/libexec/typeless-ibus-engine --log-path
+tail -f ~/.local/state/typeless-ibus/logs/typeless-ibus.latest.jsonl
+```
+
+日志使用一行一个 JSON 对象的格式。识别会话可用 `session_id` 关联，最终文本位于
+`voice_session.finished` 事件的 `transcript` 字段。完整格式见[本地日志](logging.md)。
+
 ## Fn 没有反应
 
 部分设备的 `Fn` 由键盘固件处理，Linux 收不到独立按键事件。请从 IBus 输入法菜单改用

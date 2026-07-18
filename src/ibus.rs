@@ -111,7 +111,11 @@ impl EngineFactory {
             .object_server()
             .at(
                 path_string.as_str(),
-                VoiceEngine::new(self.config.clone(), self.credentials_path.clone()),
+                VoiceEngine::new(
+                    path_string.clone(),
+                    self.config.clone(),
+                    self.credentials_path.clone(),
+                ),
             )
             .await
             .map_err(|error| fdo::Error::Failed(error.to_string()))?;

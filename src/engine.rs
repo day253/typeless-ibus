@@ -6,8 +6,10 @@ use crate::properties::{self, ConfigAction};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
+use tracing::Instrument;
+use uuid::Uuid;
 use xkeysym::{Keysym, key};
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{Structure, Value};
@@ -28,6 +30,7 @@ struct SessionState {
     phase: Phase,
     generation: u64,
     capture: Option<AudioCaptureHandle>,
+    log_context: Option<RecognitionLogContext>,
 }
 
 impl Default for SessionState {
@@ -36,23 +39,123 @@ impl Default for SessionState {
             phase: Phase::Idle,
             generation: 0,
             capture: None,
+            log_context: None,
         }
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct CursorLocation {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct IbusContext {
+    focused: bool,
+    client: Option<String>,
+    object_path: Option<String>,
+    cursor: CursorLocation,
+    capabilities: u32,
+}
+
+#[derive(Debug, Clone)]
+struct RecognitionLogContext {
+    session_id: String,
+    started_at: Instant,
+    engine_path: String,
+    provider: String,
+    ibus: IbusContext,
+    content_type: (u32, u32),
+}
+
+impl RecognitionLogContext {
+    fn new(
+        engine_path: &str,
+        provider: &str,
+        ibus: &IbusContext,
+        content_type: (u32, u32),
+    ) -> Self {
+        Self {
+            session_id: Uuid::new_v4().to_string(),
+            started_at: Instant::now(),
+            engine_path: engine_path.to_string(),
+            provider: provider.to_string(),
+            ibus: ibus.clone(),
+            content_type,
+        }
+    }
+
+    fn log_started(&self, trigger: &str, mode: TriggerMode) {
+        tracing::info!(
+            schema_version = 1,
+            event = "voice_session.started",
+            session_id = %self.session_id,
+            engine_path = %self.engine_path,
+            provider = %self.provider,
+            trigger,
+            trigger_mode = ?mode,
+            ibus_client = self.ibus.client.as_deref().unwrap_or("unknown"),
+            input_context = self.ibus.object_path.as_deref().unwrap_or("unknown"),
+            cursor_x = self.ibus.cursor.x,
+            cursor_y = self.ibus.cursor.y,
+            cursor_width = self.ibus.cursor.width,
+            cursor_height = self.ibus.cursor.height,
+            input_purpose = input_purpose_name(self.content_type.0),
+            input_purpose_code = self.content_type.0,
+            input_hints = self.content_type.1,
+            client_capabilities = self.ibus.capabilities,
+            "voice session started"
+        );
+    }
+
+    fn log_finished(&self, status: &str, transcript: Option<&str>, error: Option<&str>) {
+        let transcript = transcript.unwrap_or_default();
+        tracing::info!(
+            schema_version = 1,
+            event = "voice_session.finished",
+            session_id = %self.session_id,
+            engine_path = %self.engine_path,
+            provider = %self.provider,
+            status,
+            duration_ms = elapsed_millis(self.started_at),
+            ibus_client = self.ibus.client.as_deref().unwrap_or("unknown"),
+            input_context = self.ibus.object_path.as_deref().unwrap_or("unknown"),
+            cursor_x = self.ibus.cursor.x,
+            cursor_y = self.ibus.cursor.y,
+            cursor_width = self.ibus.cursor.width,
+            cursor_height = self.ibus.cursor.height,
+            input_purpose = input_purpose_name(self.content_type.0),
+            input_purpose_code = self.content_type.0,
+            input_hints = self.content_type.1,
+            client_capabilities = self.ibus.capabilities,
+            transcript,
+            transcript_characters = transcript.chars().count(),
+            error = error.unwrap_or_default(),
+            "voice session finished"
+        );
+    }
+}
+
 pub struct VoiceEngine {
+    engine_path: String,
     config: ConfigStore,
     credentials_path: PathBuf,
     session: Arc<Mutex<SessionState>>,
+    ibus_context: IbusContext,
     content_type: (u32, u32),
 }
 
 impl VoiceEngine {
-    pub fn new(config: ConfigStore, credentials_path: PathBuf) -> Self {
+    pub fn new(engine_path: String, config: ConfigStore, credentials_path: PathBuf) -> Self {
         Self {
+            engine_path,
             config,
             credentials_path,
             session: Arc::new(Mutex::new(SessionState::default())),
+            ibus_context: IbusContext::default(),
             content_type: (0, 0),
         }
     }
@@ -77,13 +180,21 @@ impl VoiceEngine {
             }
         };
 
+        let log_context = RecognitionLogContext::new(
+            &self.engine_path,
+            config.asr.provider.as_str(),
+            &self.ibus_context,
+            self.content_type,
+        );
         let generation = {
             let mut session = lock_session(&self.session);
             session.generation = session.generation.wrapping_add(1);
             session.phase = Phase::Recording;
             session.capture = Some(capture);
+            session.log_context = Some(log_context.clone());
             session.generation
         };
+        log_context.log_started(&config.trigger_key, config.trigger_mode);
 
         let _ = Self::update_auxiliary_text(emitter, ibus_text(String::new()), false).await;
         update_preedit(
@@ -96,20 +207,30 @@ impl VoiceEngine {
         let session = self.session.clone();
         let credentials_path = self.credentials_path.clone();
         let asr_config = config.asr.clone();
-        tokio::spawn(run_recognition(
-            session.clone(),
-            generation,
-            audio_rx,
-            asr_config,
-            credentials_path,
-            owned_emitter.clone(),
-        ));
+        let recognition_span = tracing::info_span!(
+            "voice_session",
+            session_id = %log_context.session_id,
+            provider = %log_context.provider
+        );
+        tokio::spawn(
+            run_recognition(
+                session.clone(),
+                generation,
+                audio_rx,
+                asr_config,
+                credentials_path,
+                owned_emitter.clone(),
+                log_context,
+            )
+            .instrument(recognition_span),
+        );
 
         let max_duration = Duration::from_secs(config.max_recording_seconds);
         tokio::spawn(async move {
             tokio::time::sleep(max_duration).await;
             if request_stop(&session, generation) {
-                tracing::warn!(generation, "maximum recording duration reached");
+                let session_id = active_session_id(&session).unwrap_or_else(|| "unknown".into());
+                tracing::warn!(generation, %session_id, "maximum recording duration reached");
                 let _ = Self::update_auxiliary_text(
                     &owned_emitter,
                     ibus_text(i18n::text("Finishing recognition…", "正在完成识别…").to_string()),
@@ -164,7 +285,8 @@ impl VoiceEngine {
 
     async fn cancel(&self, emitter: &SignalEmitter<'_>, show_message: bool) {
         let canceled = cancel_session(&self.session);
-        if canceled {
+        if let Some(log_context) = canceled {
+            log_context.log_finished("canceled", None, None);
             hide_preedit(emitter).await;
             if show_message {
                 let _ = Self::update_auxiliary_text(
@@ -186,6 +308,14 @@ impl VoiceEngine {
 
     fn has_active_session(&self) -> bool {
         lock_session(&self.session).phase != Phase::Idle
+    }
+
+    fn clear_focus_context(&mut self) {
+        self.ibus_context.focused = false;
+        self.ibus_context.client = None;
+        self.ibus_context.object_path = None;
+        self.ibus_context.cursor = CursorLocation::default();
+        self.content_type = (0, 0);
     }
 }
 
@@ -235,13 +365,22 @@ impl VoiceEngine {
         Ok(false)
     }
 
-    fn set_cursor_location(&mut self, _x: i32, _y: i32, _w: i32, _h: i32) {}
+    fn set_cursor_location(&mut self, x: i32, y: i32, width: i32, height: i32) {
+        self.ibus_context.cursor = CursorLocation {
+            x,
+            y,
+            width,
+            height,
+        };
+    }
 
     fn process_hand_writing_event(&mut self, _coordinates: Vec<f64>) {}
 
     fn cancel_hand_writing(&mut self, _n_strokes: u32) {}
 
-    fn set_capabilities(&mut self, _caps: u32) {}
+    fn set_capabilities(&mut self, capabilities: u32) {
+        self.ibus_context.capabilities = capabilities;
+    }
 
     async fn property_activate(
         &mut self,
@@ -283,20 +422,25 @@ impl VoiceEngine {
     fn candidate_clicked(&mut self, _index: u32, _button: u32, _state: u32) {}
 
     async fn focus_in(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
+        self.ibus_context.focused = true;
         self.register_config_properties(&emitter).await;
     }
 
     async fn focus_in_id(
         &mut self,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
-        _object_path: String,
-        _client: String,
+        object_path: String,
+        client: String,
     ) {
+        self.ibus_context.focused = true;
+        self.ibus_context.object_path = non_empty_context_value(object_path);
+        self.ibus_context.client = non_empty_context_value(client);
         self.register_config_properties(&emitter).await;
     }
 
     async fn focus_out(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         self.cancel(&emitter, false).await;
+        self.clear_focus_context();
     }
 
     async fn focus_out_id(
@@ -305,6 +449,7 @@ impl VoiceEngine {
         _object_path: String,
     ) {
         self.cancel(&emitter, false).await;
+        self.clear_focus_context();
     }
 
     async fn reset(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
@@ -402,6 +547,7 @@ async fn run_recognition(
     asr_config: AsrConfig,
     credentials_path: PathBuf,
     emitter: SignalEmitter<'static>,
+    log_context: RecognitionLogContext,
 ) {
     let (event_tx, mut event_rx) = mpsc::unbounded_channel();
     let recognition = asr::transcribe(&asr_config, audio_rx, &credentials_path, move |event| {
@@ -453,6 +599,7 @@ async fn run_recognition(
     if let Some(text) = commit_text {
         if let Err(error) = VoiceEngine::commit_text(&emitter, ibus_text(text.clone())).await {
             tracing::error!(%error, "failed to commit recognized text");
+            log_context.log_finished("commit_failed", Some(&text), Some(&error.to_string()));
             show_error(
                 &emitter,
                 format!(
@@ -469,6 +616,7 @@ async fn run_recognition(
                 characters = text.chars().count(),
                 "committed recognized text"
             );
+            log_context.log_finished("committed", Some(&text), None);
             let _ =
                 VoiceEngine::update_auxiliary_text(&emitter, ibus_text(String::new()), false).await;
         }
@@ -476,6 +624,7 @@ async fn run_recognition(
     }
     match result {
         Ok(_) => {
+            log_context.log_finished("no_speech", None, None);
             show_error(
                 &emitter,
                 i18n::text("No speech was recognized", "没有识别到语音").to_string(),
@@ -484,6 +633,7 @@ async fn run_recognition(
         }
         Err(error) => {
             tracing::error!(error = %format_args!("{error:#}"), "speech recognition failed");
+            log_context.log_finished("recognition_failed", None, Some(&format!("{error:#}")));
             show_error(
                 &emitter,
                 format!(
@@ -518,17 +668,17 @@ fn request_stop(session: &Arc<Mutex<SessionState>>, generation: u64) -> bool {
     true
 }
 
-fn cancel_session(session: &Arc<Mutex<SessionState>>) -> bool {
+fn cancel_session(session: &Arc<Mutex<SessionState>>) -> Option<RecognitionLogContext> {
     let mut session = lock_session(session);
     if session.phase == Phase::Idle {
-        return false;
+        return None;
     }
     session.generation = session.generation.wrapping_add(1);
     session.phase = Phase::Idle;
     if let Some(mut capture) = session.capture.take() {
         capture.stop();
     }
-    true
+    session.log_context.take()
 }
 
 fn finish_session(session: &Arc<Mutex<SessionState>>, generation: u64) -> bool {
@@ -540,7 +690,15 @@ fn finish_session(session: &Arc<Mutex<SessionState>>, generation: u64) -> bool {
         capture.stop();
     }
     session.phase = Phase::Idle;
+    session.log_context = None;
     true
+}
+
+fn active_session_id(session: &Arc<Mutex<SessionState>>) -> Option<String> {
+    lock_session(session)
+        .log_context
+        .as_ref()
+        .map(|context| context.session_id.clone())
 }
 
 fn is_current(session: &Arc<Mutex<SessionState>>, generation: u64) -> bool {
@@ -550,6 +708,32 @@ fn is_current(session: &Arc<Mutex<SessionState>>, generation: u64) -> bool {
 
 fn lock_session(session: &Arc<Mutex<SessionState>>) -> MutexGuard<'_, SessionState> {
     session.lock().unwrap_or_else(|error| error.into_inner())
+}
+
+fn non_empty_context_value(value: String) -> Option<String> {
+    let value = value.trim();
+    (!value.is_empty()).then(|| value.to_string())
+}
+
+fn input_purpose_name(purpose: u32) -> &'static str {
+    match purpose {
+        0 => "free-form",
+        1 => "alpha",
+        2 => "digits",
+        3 => "number",
+        4 => "phone",
+        5 => "url",
+        6 => "email",
+        7 => "name",
+        8 => "password",
+        9 => "pin",
+        10 => "terminal",
+        _ => "unknown",
+    }
+}
+
+fn elapsed_millis(started_at: Instant) -> u64 {
+    u64::try_from(started_at.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 async fn update_preedit(emitter: &SignalEmitter<'_>, text: &str) {
@@ -617,6 +801,7 @@ mod tests {
             phase: Phase::Recording,
             generation: 8,
             capture: None,
+            log_context: None,
         }));
         assert!(!finish_session(&session, 7));
         assert_eq!(lock_session(&session).phase, Phase::Recording);
@@ -641,5 +826,17 @@ mod tests {
             preferred_transcript(&failed_result, "超时前的完整内容").as_deref(),
             Some("超时前的完整内容")
         );
+    }
+
+    #[test]
+    fn ibus_context_values_are_normalized_for_logs() {
+        assert_eq!(
+            non_empty_context_value(" gtk4:org.example.App ".into()).as_deref(),
+            Some("gtk4:org.example.App")
+        );
+        assert_eq!(non_empty_context_value("  ".into()), None);
+        assert_eq!(input_purpose_name(0), "free-form");
+        assert_eq!(input_purpose_name(8), "password");
+        assert_eq!(input_purpose_name(99), "unknown");
     }
 }
