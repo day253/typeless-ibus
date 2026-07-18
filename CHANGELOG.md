@@ -36,6 +36,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   lives with the `doubao` provider documentation instead of the product overview.
 - Speech language defaults now follow the system locale and time zone, prefer Chinese for an
   English-default system in a China time zone, and omit hints for providers that cannot accept them.
+- Credential recovery after a Doubao service-discovery failure now waits two seconds before
+  registering and retrying, avoiding an immediate second upstream connection.
 
 ## [0.5.3] - 2026-07-18
 

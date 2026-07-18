@@ -41,6 +41,7 @@ const USER_AGENT: &str = "com.bytedance.android.doubaoime/100102018 (Linux; U; A
 const SAMPLE_RATE: u32 = 16_000;
 const FRAME_DURATION_MS: u64 = 20;
 const PCM_FRAME_BYTES: usize = 640;
+const ASR_RETRY_DELAY: Duration = Duration::from_secs(2);
 
 #[derive(Debug, Clone)]
 pub enum AsrEvent {
@@ -460,8 +461,10 @@ where
             tracing::warn!(
                 error = %format_args!("{error:#}"),
                 buffered_frames = buffered_audio.len(),
+                retry_delay_ms = ASR_RETRY_DELAY.as_millis() as u64,
                 "ASR service discovery failed; registering replacement credentials"
             );
+            tokio::time::sleep(ASR_RETRY_DELAY).await;
             let replacement = acquire_fresh_credentials(&client)
                 .await
                 .context("重新获取 ASR 凭据失败")?;
@@ -1538,6 +1541,11 @@ mod tests {
             ..Default::default()
         });
         assert!(!is_service_discovery_error(&unrelated));
+    }
+
+    #[test]
+    fn credential_retry_has_a_backoff_delay() {
+        assert_eq!(ASR_RETRY_DELAY, Duration::from_secs(2));
     }
 
     #[tokio::test]

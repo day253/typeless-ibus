@@ -71,7 +71,8 @@ tail -f ~/.local/state/typeless-ibus/logs/typeless-ibus.latest.jsonl
 `x-request-id` 或 `x-trace-id` 等请求标识，会在不记录密钥和音频的前提下写入诊断日志，
 可用于排查对应的上游请求。
 
-正式输入遇到 `service discovery failure` 时会自动获取新凭据并重放当前音频；第二次
-失败不会无限重试。
+正式输入遇到 `service discovery failure` 时会先等待 2 秒，再获取新凭据并重放当前音频；
+第二次失败不会无限重试。`40200011`/`concurrency quota exceeded` 属于上游并发额度错误，
+不会通过刷新本地凭据解决。
 
 [返回文档索引](README.md)
