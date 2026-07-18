@@ -527,7 +527,7 @@ main {
 .preedit-text {
   padding-bottom: 2px;
   border-bottom: 1.5px solid var(--purple);
-  color: var(--purple-dark);
+  color: #918995;
 }
 
 .caret,
@@ -880,6 +880,12 @@ main {
   padding-bottom: 2px;
   border-bottom: 1px solid var(--purple);
   color: var(--purple-dark);
+}
+
+.preedit-ellipsis,
+.listening-dots {
+  color: #918995;
+  letter-spacing: 0.14em;
 }
 
 .send-button {

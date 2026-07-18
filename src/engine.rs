@@ -16,8 +16,9 @@ use zbus::zvariant::{Structure, Value};
 use zbus::{fdo, interface};
 
 const RELEASE_MASK: u32 = 1 << 30;
-const WAITING_PREEDIT_ENGLISH: &str = "Listening…";
-const WAITING_PREEDIT_CHINESE: &str = "聆听中…";
+const IBUS_ATTR_TYPE_FOREGROUND: u32 = 2;
+const MUTED_ELLIPSIS_RGB: u32 = 0x888888;
+const LISTENING_ELLIPSIS: &str = "…";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Phase {
@@ -221,11 +222,7 @@ impl VoiceEngine {
 
         let device_message = format!("{}{}", i18n::text("Microphone: ", "麦克风："), audio_device);
         let _ = Self::update_auxiliary_text(emitter, ibus_text(device_message), true).await;
-        update_preedit(
-            emitter,
-            i18n::text(WAITING_PREEDIT_ENGLISH, WAITING_PREEDIT_CHINESE),
-        )
-        .await;
+        update_preedit(emitter, "").await;
 
         let owned_emitter = emitter.to_owned();
         let session = self.session.clone();
@@ -588,13 +585,7 @@ async fn run_recognition(
                         return;
                     }
                     match event {
-                        AsrEvent::SpeechStarted => {
-                            update_preedit(
-                                &emitter,
-                                i18n::text("🎙 Recognizing…", "🎙 正在识别…"),
-                            )
-                            .await
-                        }
+                        AsrEvent::SpeechStarted => update_preedit(&emitter, &latest_text).await,
                         AsrEvent::Partial(text) | AsrEvent::Final(text) => {
                             latest_text.clone_from(&text);
                             update_preedit(&emitter, &text).await;
@@ -763,7 +754,7 @@ fn elapsed_millis(started_at: Instant) -> u64 {
 async fn update_preedit(emitter: &SignalEmitter<'_>, text: &str) {
     let cursor = text.chars().count() as u32;
     if let Err(error) =
-        VoiceEngine::update_preedit_text(emitter, ibus_text(text.to_string()), cursor, true, 0)
+        VoiceEngine::update_preedit_text(emitter, ibus_listening_preedit(text), cursor, true, 0)
             .await
     {
         tracing::warn!(%error, "failed to update preedit text");
@@ -780,10 +771,28 @@ async fn show_error(emitter: &SignalEmitter<'_>, message: String) {
 }
 
 fn ibus_text(text: String) -> Value<'static> {
+    ibus_text_with_attributes(text, Vec::new())
+}
+
+fn ibus_listening_preedit(text: &str) -> Value<'static> {
+    let cursor = text.chars().count() as u32;
+    let display_text = format!("{text}{LISTENING_ELLIPSIS}");
+    let ellipsis_attribute = Value::new(Structure::from((
+        "IBusAttribute",
+        HashMap::<String, Value<'static>>::new(),
+        IBUS_ATTR_TYPE_FOREGROUND,
+        MUTED_ELLIPSIS_RGB,
+        cursor,
+        cursor + LISTENING_ELLIPSIS.chars().count() as u32,
+    )));
+    ibus_text_with_attributes(display_text, vec![ellipsis_attribute])
+}
+
+fn ibus_text_with_attributes(text: String, attributes: Vec<Value<'static>>) -> Value<'static> {
     let attributes = Structure::from((
         "IBusAttrList",
         HashMap::<String, Value<'static>>::new(),
-        Vec::<Value<'static>>::new(),
+        attributes,
     ));
     let text = Structure::from((
         "IBusText",
@@ -814,9 +823,14 @@ mod tests {
     }
 
     #[test]
-    fn waiting_preedit_is_localized_and_uses_a_centered_ellipsis() {
-        assert_eq!(WAITING_PREEDIT_ENGLISH, "Listening…");
-        assert_eq!(WAITING_PREEDIT_CHINESE, "聆听中…");
+    fn listening_preedit_appends_a_muted_ellipsis() {
+        assert_eq!(LISTENING_ELLIPSIS, "…");
+        assert_eq!("中间文本…", format!("中间文本{LISTENING_ELLIPSIS}"));
+        assert_eq!(MUTED_ELLIPSIS_RGB, 0x888888);
+        assert_eq!(
+            ibus_listening_preedit("中间文本").value_signature(),
+            "(sa{sv}sv)"
+        );
     }
 
     #[test]
@@ -865,10 +879,9 @@ mod tests {
     }
 
     #[test]
-    fn audio_device_prompt_is_separate_from_waiting_preedit() {
+    fn audio_device_prompt_is_separate_from_listening_preedit() {
         let prompt = format!("{}{}", "麦克风：", "USB Microphone");
         assert_eq!(prompt, "麦克风：USB Microphone");
-        assert_eq!(WAITING_PREEDIT_CHINESE, "聆听中…");
-        assert!(!prompt.contains(WAITING_PREEDIT_CHINESE));
+        assert!(!prompt.contains(LISTENING_ELLIPSIS));
     }
 }
