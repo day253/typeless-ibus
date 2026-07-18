@@ -35,6 +35,7 @@ typeless-ibus-engine --log-path
 
 - `voice_session.started`：录音开始时的 IBus 上下文快照。
 - `voice_session.finished`：会话状态、耗时和最终识别文本。
+- `voice_session.audio_device_missing`：没有默认或指定的输入设备时记录的错误事件。
 
 完成事件示例：
 
@@ -60,12 +61,16 @@ IBus 可以向引擎提供光标矩形、输入用途、输入提示和客户端
 `unknown`；光标坐标也可能是零或由 Wayland/应用进行过坐标转换，因此只能用于排障，不能
 当作稳定的应用身份或绝对屏幕位置。
 
+`voice_session.started` 和 `voice_session.finished` 还会记录实际打开的 `audio_device` 名称，
+用于确认当前会话使用的是默认设备还是配置中指定的设备。
+
 ## 保存和排除的数据
 
 日志会保存：
 
 - 最终识别文本；
 - 会话时间、耗时、状态和 Provider；
+- 实际打开的音频设备名称；
 - IBus 可用的应用上下文；
 - 上游返回的 `x-tt-logid`、`request_id` 等排障 ID；
 - 脱敏后的错误信息。

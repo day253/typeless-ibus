@@ -38,6 +38,13 @@ pub fn input_devices() -> Result<Vec<AudioDeviceInfo>> {
 
 pub struct AudioCaptureHandle {
     stop_tx: Option<std::sync::mpsc::Sender<()>>,
+    device_name: String,
+}
+
+impl AudioCaptureHandle {
+    pub fn device_name(&self) -> &str {
+        &self.device_name
+    }
 }
 
 impl AudioCaptureHandle {
@@ -49,18 +56,19 @@ impl AudioCaptureHandle {
 
         std::thread::spawn(move || {
             let result = run_capture(requested_device.as_deref(), audio_tx, stop_rx, ready_tx);
-            if let Err(error) = result {
+            if let Err(error) = &result {
                 tracing::error!("audio capture failed: {error:#}");
             }
         });
 
-        let ready = ready_rx
+        let device_name = ready_rx
             .recv_timeout(Duration::from_secs(5))
             .context("等待麦克风启动超时")?;
-        ready.map_err(anyhow::Error::msg)?;
+        let device_name = device_name.map_err(anyhow::Error::msg)?;
         Ok((
             Self {
                 stop_tx: Some(stop_tx),
+                device_name,
             },
             audio_rx,
         ))
@@ -96,19 +104,30 @@ fn run_capture(
     device_name: Option<&str>,
     sender: mpsc::Sender<Vec<u8>>,
     stop_rx: std::sync::mpsc::Receiver<()>,
-    ready_tx: std::sync::mpsc::SyncSender<Result<(), String>>,
+    ready_tx: std::sync::mpsc::SyncSender<Result<String, String>>,
 ) -> Result<()> {
-    let device = find_device(device_name)?;
-    let supported = device
-        .default_input_config()
-        .context("读取麦克风格式失败")?;
+    let device = match find_device(device_name) {
+        Ok(device) => device,
+        Err(error) => {
+            let _ = ready_tx.send(Err(format!("{error:#}")));
+            return Err(error);
+        }
+    };
+    let actual_device_name = device.name().unwrap_or_else(|_| "默认输入设备".to_string());
+    let supported = match device.default_input_config() {
+        Ok(config) => config,
+        Err(error) => {
+            let _ = ready_tx.send(Err(format!("{error:#}")));
+            return Err(error).context("读取麦克风格式失败");
+        }
+    };
     let sample_format = supported.sample_format();
     let source_rate = supported.sample_rate().0;
     let source_channels = supported.channels();
     let config: StreamConfig = supported.into();
     let buffer = Arc::new(Mutex::new(Vec::<i16>::with_capacity(SAMPLES_PER_FRAME * 2)));
 
-    let stream = build_stream(
+    let stream = match build_stream(
         &device,
         &config,
         sample_format,
@@ -116,20 +135,33 @@ fn run_capture(
         source_channels,
         sender,
         buffer,
-    );
-
-    let stream = match stream {
+    ) {
         Ok(stream) => stream,
         Err(error) => {
             let _ = ready_tx.send(Err(format!("{error:#}")));
             return Err(error);
         }
     };
-    stream.play().context("启动麦克风失败")?;
-    let _ = ready_tx.send(Ok(()));
+
+    if let Err(error) = stream.play().context("启动麦克风失败") {
+        let _ = ready_tx.send(Err(format!("{error:#}")));
+        return Err(error);
+    }
+    let _ = ready_tx.send(Ok(actual_device_name));
     let _ = stop_rx.recv();
     drop(stream);
     Ok(())
+}
+
+pub fn is_no_input_device_error(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        let message = cause.to_string().to_ascii_lowercase();
+        message.contains("没有可用的默认麦克风")
+            || message.contains("找不到麦克风")
+            || message.contains("no input device")
+            || message.contains("no default input device")
+            || message.contains("input device not found")
+    })
 }
 
 fn build_stream(
@@ -222,5 +254,29 @@ fn process_samples(
             .flat_map(|sample| sample.to_le_bytes())
             .collect();
         let _ = sender.try_send(bytes);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn classifies_missing_input_devices() {
+        assert!(is_no_input_device_error(&anyhow!("没有可用的默认麦克风")));
+        assert!(is_no_input_device_error(&anyhow!(
+            "No default input device"
+        )));
+        assert!(!is_no_input_device_error(&anyhow!("启动麦克风失败")));
+    }
+
+    #[test]
+    fn reports_an_unavailable_selected_device_without_waiting_for_audio() {
+        let result = AudioCaptureHandle::start(Some("__typeless_missing_input_device__"));
+        let error = match result {
+            Ok(_) => panic!("an intentionally missing input device unexpectedly opened"),
+            Err(error) => error,
+        };
+        assert!(is_no_input_device_error(&error));
     }
 }

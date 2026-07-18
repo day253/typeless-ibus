@@ -67,6 +67,7 @@ struct RecognitionLogContext {
     started_at: Instant,
     engine_path: String,
     provider: String,
+    audio_device: String,
     ibus: IbusContext,
     content_type: (u32, u32),
 }
@@ -75,6 +76,7 @@ impl RecognitionLogContext {
     fn new(
         engine_path: &str,
         provider: &str,
+        audio_device: &str,
         ibus: &IbusContext,
         content_type: (u32, u32),
     ) -> Self {
@@ -83,6 +85,7 @@ impl RecognitionLogContext {
             started_at: Instant::now(),
             engine_path: engine_path.to_string(),
             provider: provider.to_string(),
+            audio_device: audio_device.to_string(),
             ibus: ibus.clone(),
             content_type,
         }
@@ -95,6 +98,7 @@ impl RecognitionLogContext {
             session_id = %self.session_id,
             engine_path = %self.engine_path,
             provider = %self.provider,
+            audio_device = %self.audio_device,
             trigger,
             trigger_mode = ?mode,
             ibus_client = self.ibus.client.as_deref().unwrap_or("unknown"),
@@ -119,6 +123,7 @@ impl RecognitionLogContext {
             session_id = %self.session_id,
             engine_path = %self.engine_path,
             provider = %self.provider,
+            audio_device = %self.audio_device,
             status,
             duration_ms = elapsed_millis(self.started_at),
             ibus_client = self.ibus.client.as_deref().unwrap_or("unknown"),
@@ -170,6 +175,22 @@ impl VoiceEngine {
         let (capture, audio_rx) = match AudioCaptureHandle::start(config.input_device.as_deref()) {
             Ok(value) => value,
             Err(error) => {
+                if crate::audio::is_no_input_device_error(&error) {
+                    tracing::warn!(
+                        schema_version = 1,
+                        event = "voice_session.audio_device_missing",
+                        requested_audio_device = config.input_device.as_deref().unwrap_or("default"),
+                        error = %format_args!("{error:#}"),
+                        "no audio input device detected"
+                    );
+                    show_error(
+                        emitter,
+                        i18n::text("No audio input device detected", "没有检测到音频输入设备")
+                            .to_string(),
+                    )
+                    .await;
+                    return;
+                }
                 let message = format!(
                     "{}{error:#}",
                     i18n::text("Unable to start the microphone: ", "无法启动麦克风：")
@@ -179,10 +200,12 @@ impl VoiceEngine {
                 return;
             }
         };
+        let audio_device = capture.device_name().to_string();
 
         let log_context = RecognitionLogContext::new(
             &self.engine_path,
             config.asr.provider.as_str(),
+            &audio_device,
             &self.ibus_context,
             self.content_type,
         );
@@ -196,7 +219,8 @@ impl VoiceEngine {
         };
         log_context.log_started(&config.trigger_key, config.trigger_mode);
 
-        let _ = Self::update_auxiliary_text(emitter, ibus_text(String::new()), false).await;
+        let device_message = format!("{}{}", i18n::text("Microphone: ", "麦克风："), audio_device);
+        let _ = Self::update_auxiliary_text(emitter, ibus_text(device_message), true).await;
         update_preedit(
             emitter,
             i18n::text(WAITING_PREEDIT_ENGLISH, WAITING_PREEDIT_CHINESE),
@@ -838,5 +862,13 @@ mod tests {
         assert_eq!(input_purpose_name(0), "free-form");
         assert_eq!(input_purpose_name(8), "password");
         assert_eq!(input_purpose_name(99), "unknown");
+    }
+
+    #[test]
+    fn audio_device_prompt_is_separate_from_waiting_preedit() {
+        let prompt = format!("{}{}", "麦克风：", "USB Microphone");
+        assert_eq!(prompt, "麦克风：USB Microphone");
+        assert_eq!(WAITING_PREEDIT_CHINESE, "聆听中…");
+        assert!(!prompt.contains(WAITING_PREEDIT_CHINESE));
     }
 }

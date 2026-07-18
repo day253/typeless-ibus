@@ -18,6 +18,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   provider routing, WAV encoding, long-audio splitting, and request ID handling.
 - Daily local JSONL logs with seven-file retention, final recognition transcripts, per-session UUIDs,
   request correlation, and the application context exposed by IBus without storing recorded audio.
+- The recording prompt now shows the actual microphone in IBus auxiliary text and reports a missing
+  audio input device separately, while the compact listening preedit stays unchanged.
 
 ### Changed
 
