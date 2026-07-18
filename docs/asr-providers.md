@@ -20,7 +20,7 @@
 | [`bailian`](asr/alibaba-bailian.md) | DashScope 经典双工 WebSocket | `apiKey` | 显式配置 |
 | [`bailian-qwen3-realtime`](asr/alibaba-bailian.md) | Qwen3 Realtime WebSocket | `apiKey` | 显式配置 |
 | [`bailian-fun-asr-flash`](asr/alibaba-bailian.md) | DashScope 多模态批量 HTTP | `apiKey` | 显式配置 |
-| [`volcengine`](asr/volcengine.md) | SAUC 大模型流式 WebSocket | `appKey`、`accessKey` | 显式配置 |
+| [`volcengine`](asr/volcengine.md) | SAUC 大模型流式 WebSocket | `apiKey`；兼容旧版 `appKey` + `accessKey` | 显式配置 |
 
 `openai-compatible` 面向实现标准 multipart `audio/transcriptions` 请求和
 `{ "text": "..." }` 响应的服务。同一个适配器可以连接其他兼容厂商或自定义云端服务。

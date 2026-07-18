@@ -39,28 +39,7 @@ impl VolcengineProvider {
         mut on_event: EventHandler,
     ) -> Result<String> {
         let connect_id = Uuid::new_v4().to_string();
-        let mut request = self
-            .config
-            .endpoint()
-            .into_client_request()
-            .context("创建火山引擎 WebSocket 请求失败")?;
-        for (name, value) in [
-            (
-                "X-Api-App-Key",
-                self.config.app_key().context("火山引擎缺少 appKey")?,
-            ),
-            (
-                "X-Api-Access-Key",
-                self.config.access_key().context("火山引擎缺少 accessKey")?,
-            ),
-            ("X-Api-Resource-Id", self.config.resource_id()),
-            ("X-Api-Connect-Id", connect_id.as_str()),
-        ] {
-            request.headers_mut().insert(
-                name,
-                HeaderValue::from_str(value).with_context(|| format!("{name} 不能写入请求头"))?,
-            );
-        }
+        let request = build_websocket_request(&self.config, &connect_id)?;
         let (mut socket, response) = tokio::time::timeout(CONNECT_TIMEOUT, connect_async(request))
             .await
             .context("连接火山引擎 ASR 超时")?
@@ -184,12 +163,47 @@ impl AsrProvider for VolcengineProvider {
 
     fn diagnose<'a>(&'a self) -> DiagnosticFuture<'a> {
         Box::pin(async move {
-            print_diagnosis(
-                &self.config,
-                "appKey + accessKey configured (secrets redacted)",
-            )
+            let credentials = if self.config.api_key().is_some() {
+                "apiKey configured (secret redacted)"
+            } else {
+                "legacy appKey + accessKey configured (secrets redacted)"
+            };
+            print_diagnosis(&self.config, credentials)
         })
     }
+}
+
+fn build_websocket_request(config: &AsrConfig, connect_id: &str) -> Result<http::Request<()>> {
+    let mut request = config
+        .endpoint()
+        .into_client_request()
+        .context("创建火山引擎 WebSocket 请求失败")?;
+
+    if let Some(api_key) = config.api_key() {
+        insert_header(&mut request, "X-Api-Key", api_key)?;
+    } else {
+        insert_header(
+            &mut request,
+            "X-Api-App-Key",
+            config.app_key().context("火山引擎缺少 appKey")?,
+        )?;
+        insert_header(
+            &mut request,
+            "X-Api-Access-Key",
+            config.access_key().context("火山引擎缺少 accessKey")?,
+        )?;
+    }
+    insert_header(&mut request, "X-Api-Resource-Id", config.resource_id())?;
+    insert_header(&mut request, "X-Api-Connect-Id", connect_id)?;
+    Ok(request)
+}
+
+fn insert_header(request: &mut http::Request<()>, name: &'static str, value: &str) -> Result<()> {
+    request.headers_mut().insert(
+        name,
+        HeaderValue::from_str(value).with_context(|| format!("{name} 不能写入请求头"))?,
+    );
+    Ok(())
 }
 
 async fn send_audio_chunks<S>(
@@ -273,6 +287,37 @@ mod tests {
         );
     }
 
+    #[test]
+    fn prefers_latest_api_key_auth_and_keeps_legacy_auth() {
+        let latest = AsrConfig {
+            provider: AsrProviderKind::Volcengine,
+            api_key: Some("new-api-key".to_string()),
+            app_key: Some("ignored-app-key".to_string()),
+            access_key: Some("ignored-access-key".to_string()),
+            ..AsrConfig::default()
+        };
+        let request = build_websocket_request(&latest, "latest-connect-id").unwrap();
+        assert_eq!(request.headers()["x-api-key"], "new-api-key");
+        assert!(!request.headers().contains_key("x-api-app-key"));
+        assert!(!request.headers().contains_key("x-api-access-key"));
+        assert_eq!(
+            request.headers()["x-api-resource-id"],
+            AsrConfig::DEFAULT_VOLCENGINE_RESOURCE_ID
+        );
+        assert_eq!(request.headers()["x-api-connect-id"], "latest-connect-id");
+
+        let legacy = AsrConfig {
+            provider: AsrProviderKind::Volcengine,
+            app_key: Some("legacy-app-key".to_string()),
+            access_key: Some("legacy-access-key".to_string()),
+            ..AsrConfig::default()
+        };
+        let request = build_websocket_request(&legacy, "legacy-connect-id").unwrap();
+        assert!(!request.headers().contains_key("x-api-key"));
+        assert_eq!(request.headers()["x-api-app-key"], "legacy-app-key");
+        assert_eq!(request.headers()["x-api-access-key"], "legacy-access-key");
+    }
+
     #[tokio::test]
     #[allow(clippy::result_large_err)]
     async fn volcengine_websocket_protocol_returns_transcript() {
@@ -281,8 +326,9 @@ mod tests {
         let server = tokio::spawn(async move {
             let (stream, _) = listener.accept().await.unwrap();
             let mut socket = accept_hdr_async(stream, |request: &http::Request<()>, response| {
-                assert_eq!(request.headers()["x-api-app-key"], "app-key");
-                assert_eq!(request.headers()["x-api-access-key"], "access-key");
+                assert_eq!(request.headers()["x-api-key"], "api-key");
+                assert!(!request.headers().contains_key("x-api-app-key"));
+                assert!(!request.headers().contains_key("x-api-access-key"));
                 assert_eq!(
                     request.headers()["x-api-resource-id"],
                     AsrConfig::DEFAULT_VOLCENGINE_RESOURCE_ID
@@ -321,8 +367,7 @@ mod tests {
         let provider = VolcengineProvider::new(AsrConfig {
             provider: AsrProviderKind::Volcengine,
             endpoint: Some(format!("ws://{address}")),
-            app_key: Some("app-key".to_string()),
-            access_key: Some("access-key".to_string()),
+            api_key: Some("api-key".to_string()),
             ..AsrConfig::default()
         })
         .unwrap();

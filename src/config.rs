@@ -242,13 +242,11 @@ impl AsrConfig {
         if self.provider.requires_api_key() && self.api_key().is_none() {
             bail!("{} 需要 asr.apiKey", self.provider.as_str());
         }
-        if self.provider == AsrProviderKind::Volcengine {
-            if self.app_key().is_none() {
-                bail!("volcengine 需要 asr.appKey");
-            }
-            if self.access_key().is_none() {
-                bail!("volcengine 需要 asr.accessKey");
-            }
+        if self.provider == AsrProviderKind::Volcengine
+            && self.api_key().is_none()
+            && (self.app_key().is_none() || self.access_key().is_none())
+        {
+            bail!("volcengine 需要 asr.apiKey，或旧版 asr.appKey + asr.accessKey");
         }
         Ok(())
     }
@@ -579,7 +577,12 @@ mod tests {
             ..AsrConfig::default()
         };
         assert!(volcengine.validate().is_err());
+        volcengine.api_key = Some("api-key".to_string());
+        assert!(volcengine.validate().is_ok());
+
+        volcengine.api_key = None;
         volcengine.app_key = Some("app".to_string());
+        assert!(volcengine.validate().is_err());
         volcengine.access_key = Some("access".to_string());
         assert!(volcengine.validate().is_ok());
     }

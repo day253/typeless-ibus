@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="typeless-ibus 是面向 Linux 的原生 IBus 语音输入法。按住、说话、松开，文字直接进入当前输入框。"
+      content="typeless-ibus 是面向 Linux 的原生 IBus 语音输入法。按住、说话、松开，支持豆包、OpenAI、Groq、百炼、火山引擎等云端 ASR。"
     />
     <meta name="theme-color" content="#17111f" />
     <meta property="og:title" content="typeless-ibus — 说出来，文字就到了" />
     <meta
       property="og:description"
-      content="Ubuntu 与 Linux 上轻量、原生的 IBus 语音输入体验。"
+      content="Ubuntu 与 Linux 上轻量、原生的 IBus 语音输入体验，支持 10+ 云端 ASR 供应商。"
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://day253.github.io/typeless-ibus/" />
@@ -30,6 +30,7 @@
       <nav class="nav-links" aria-label="页面导航">
         <a href="#experience" data-i18n="navExperience">体验</a>
         <a href="#features" data-i18n="navFeatures">特点</a>
+        <a href="#providers" data-i18n="navProviders">ASR</a>
         <a href="#support" data-i18n="navSupport">支持</a>
       </nav>
       <div class="header-actions">
@@ -65,6 +66,7 @@
           </div>
           <ul class="hero-facts" aria-label="产品特点">
             <li><span aria-hidden="true">◆</span> Rust</li>
+            <li><span aria-hidden="true">◆</span> <span data-i18n="manyProviders">10+ 云端 ASR</span></li>
             <li><span aria-hidden="true">◆</span> <span data-i18n="noClipboard">无剪贴板注入</span></li>
           </ul>
         </div>
@@ -216,7 +218,7 @@
         <div class="section-heading reveal">
           <p class="eyebrow"><span></span><span data-i18n="featuresEyebrow">小而专注</span></p>
           <h2 data-i18n="featuresTitle">只做好语音输入。</h2>
-          <p data-i18n="featuresIntro">没有账号、历史记录或 LLM 改写。一个安静的输入法，留在系统该在的位置。</p>
+          <p data-i18n="featuresIntro">默认无需账号，也能接入你自己的云端 ASR。没有历史记录或 LLM 改写，只做安静的输入法。</p>
         </div>
         <div class="feature-grid">
           <article class="feature-card card-native reveal">
@@ -237,6 +239,42 @@
             <h3 data-i18n="directTitle">直接提交文字</h3>
             <p data-i18n="directBody">不读取和覆盖剪贴板，不注入快捷键；音频仅用于实时语音识别。</p>
           </article>
+        </div>
+      </section>
+
+      <section class="providers" id="providers">
+        <div class="provider-panel">
+          <div class="provider-copy reveal">
+            <div class="provider-lockup" aria-label="typeless-ibus">
+              <span class="provider-logo-mark" aria-hidden="true">听</span>
+              <span class="provider-wordmark">typeless<small>IBus voice input</small></span>
+            </div>
+            <p class="eyebrow"><span></span><span data-i18n="providersEyebrow">声音由你选择</span></p>
+            <h2 data-i18n="providersTitle">开箱即用，<br />也不被一家服务绑定。</h2>
+            <p data-i18n="providersBody">
+              默认豆包无需配置；需要自己的模型、额度或数据区域时，只改一个 JSON，就能切换到熟悉的云端 ASR。
+            </p>
+            <a
+              class="provider-doc-link"
+              href="https://github.com/day253/typeless-ibus/blob/main/docs/asr/README.md"
+            >
+              <span data-i18n="providersGuide">查看各供应商配置</span><span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <div class="provider-cloud reveal" aria-label="支持的云端 ASR 供应商">
+            <span class="provider-chip provider-default"><b>豆包</b><small data-i18n="providerDefault">默认 · 零配置</small></span>
+            <span class="provider-chip"><b>OpenAI</b><small>Whisper</small></span>
+            <span class="provider-chip"><b>Groq</b><small>Whisper</small></span>
+            <span class="provider-chip"><b>OpenRouter</b><small>Audio API</small></span>
+            <span class="provider-chip"><b>SiliconFlow</b><small>SenseVoice</small></span>
+            <span class="provider-chip"><b>智谱 AI</b><small>GLM-ASR</small></span>
+            <span class="provider-chip"><b>ElevenLabs</b><small>Scribe</small></span>
+            <span class="provider-chip"><b>小米 MiMo</b><small>MiMo ASR</small></span>
+            <span class="provider-chip"><b>阿里云百炼</b><small>Qwen · Fun-ASR</small></span>
+            <span class="provider-chip"><b>火山引擎</b><small data-i18n="providerApiKey">新版 API Key</small></span>
+            <span class="provider-chip provider-compatible"><b>OpenAI-compatible</b><small data-i18n="providerCompatible">自定义接口</small></span>
+          </div>
         </div>
       </section>
 

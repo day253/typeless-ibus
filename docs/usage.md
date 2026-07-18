@@ -117,10 +117,10 @@
 | `bailian` | `wss://dashscope.aliyuncs.com/api-ws/v1/inference/` | `fun-asr-realtime` | `apiKey` |
 | `bailian-qwen3-realtime` | `wss://dashscope.aliyuncs.com/api-ws/v1/realtime` | `qwen3-asr-flash-realtime` | `apiKey` |
 | `bailian-fun-asr-flash` | DashScope multimodal-generation 标准地址 | `fun-asr-flash-2026-06-15` | `apiKey` |
-| `volcengine` | `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` | 服务端大模型 | `appKey`、`accessKey` |
+| `volcengine` | `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` | 服务端大模型 | `apiKey`；兼容旧版 `appKey` + `accessKey` |
 
 百炼经典实时可以额外填写 `vocabularyId`；Qwen3 Realtime 可以填写 `language`，不填时
-自动识别。火山引擎可以用 `resourceId` 覆盖默认值
+自动识别。火山引擎新版控制台只需填写 `apiKey`；可以用 `resourceId` 覆盖默认值
 `volc.seedasr.sauc.duration`。所有 provider 都允许用 `endpoint`、`model` 覆盖默认值
 （火山引擎没有客户端 model 字段）。
 
