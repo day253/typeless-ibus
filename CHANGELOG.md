@@ -23,8 +23,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Doubao remains the zero-configuration default when `asr` is absent, including automatic initial
   credential acquisition and service-discovery credential recovery.
 - ASR diagnostics and audio fixtures now exercise the provider selected by the JSON configuration.
-- Volcengine SAUC prefers the latest single `apiKey` authentication while retaining compatibility
-  with legacy `appKey` + `accessKey` configurations.
+- Volcengine SAUC now uses the latest single `apiKey` authentication.
 - The product website now presents the supported cloud ASR providers and a prominent typeless logo.
 
 ## [0.5.3] - 2026-07-18

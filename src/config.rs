@@ -132,6 +132,7 @@ impl AsrProviderKind {
                 | Self::Bailian
                 | Self::BailianQwen3Realtime
                 | Self::BailianFunAsrFlash
+                | Self::Volcengine
         )
     }
 
@@ -157,10 +158,6 @@ pub struct AsrConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub app_key: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub access_key: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub resource_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vocabulary_id: Option<String>,
@@ -175,8 +172,6 @@ impl Default for AsrConfig {
             model: None,
             language: None,
             prompt: None,
-            app_key: None,
-            access_key: None,
             resource_id: None,
             vocabulary_id: None,
         }
@@ -206,14 +201,6 @@ impl AsrConfig {
         non_empty(self.api_key.as_deref())
     }
 
-    pub fn app_key(&self) -> Option<&str> {
-        non_empty(self.app_key.as_deref())
-    }
-
-    pub fn access_key(&self) -> Option<&str> {
-        non_empty(self.access_key.as_deref())
-    }
-
     pub fn resource_id(&self) -> &str {
         non_empty(self.resource_id.as_deref()).unwrap_or(Self::DEFAULT_VOLCENGINE_RESOURCE_ID)
     }
@@ -241,12 +228,6 @@ impl AsrConfig {
         }
         if self.provider.requires_api_key() && self.api_key().is_none() {
             bail!("{} 需要 asr.apiKey", self.provider.as_str());
-        }
-        if self.provider == AsrProviderKind::Volcengine
-            && self.api_key().is_none()
-            && (self.app_key().is_none() || self.access_key().is_none())
-        {
-            bail!("volcengine 需要 asr.apiKey，或旧版 asr.appKey + asr.accessKey");
         }
         Ok(())
     }
@@ -503,8 +484,24 @@ mod tests {
         assert_eq!(config.asr.provider, AsrProviderKind::Doubao);
         assert_eq!(config.asr.endpoint, None);
         assert_eq!(config.asr.api_key, None);
-        assert_eq!(config.asr.app_key, None);
+        assert_eq!(config.asr.resource_id, None);
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_removed_volcengine_app_and_access_keys() {
+        let error = serde_json::from_str::<Config>(
+            r#"{
+                "asr": {
+                    "provider": "volcengine",
+                    "appKey": "removed",
+                    "accessKey": "removed"
+                }
+            }"#,
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("unknown field `appKey`"));
     }
 
     #[test]
@@ -562,6 +559,7 @@ mod tests {
             AsrProviderKind::Bailian,
             AsrProviderKind::BailianQwen3Realtime,
             AsrProviderKind::BailianFunAsrFlash,
+            AsrProviderKind::Volcengine,
         ] {
             let mut config = AsrConfig {
                 provider,
@@ -571,19 +569,5 @@ mod tests {
             config.api_key = Some("secret".to_string());
             assert!(config.validate().is_ok(), "{}", provider.as_str());
         }
-
-        let mut volcengine = AsrConfig {
-            provider: AsrProviderKind::Volcengine,
-            ..AsrConfig::default()
-        };
-        assert!(volcengine.validate().is_err());
-        volcengine.api_key = Some("api-key".to_string());
-        assert!(volcengine.validate().is_ok());
-
-        volcengine.api_key = None;
-        volcengine.app_key = Some("app".to_string());
-        assert!(volcengine.validate().is_err());
-        volcengine.access_key = Some("access".to_string());
-        assert!(volcengine.validate().is_ok());
     }
 }

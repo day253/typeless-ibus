@@ -1563,8 +1563,6 @@ mod tests {
             let mut config = AsrConfig {
                 provider: kind,
                 api_key: Some("api-key".to_string()),
-                app_key: Some("app-key".to_string()),
-                access_key: Some("access-key".to_string()),
                 ..AsrConfig::default()
             };
             if kind == AsrProviderKind::Doubao {

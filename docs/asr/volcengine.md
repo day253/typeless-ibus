@@ -1,7 +1,7 @@
 # 火山引擎 ASR
 
-火山引擎预设的 `provider` 为 `volcengine`，使用 SAUC 大模型流式 WebSocket 协议。新版
-控制台只需要一个 API Key；typeless-ibus 仍兼容旧控制台的 APP ID + Access Token。
+火山引擎预设的 `provider` 为 `volcengine`，使用 SAUC 大模型流式 WebSocket 协议，只
+支持新版控制台的单 API Key 鉴权。
 
 ## 获取新版 API Key
 
@@ -10,9 +10,9 @@
 3. 确认项目已开通“豆包流式语音识别模型 2.0”。按时长计费通常使用默认 Resource ID
    `volc.seedasr.sauc.duration`；并发版等其他资源需要复制控制台实际显示的 Resource ID。
 
-官方文档：[流式语音识别 WebSocket：新版与旧版鉴权](https://www.volcengine.com/docs/6561/1354869?lang=zh)
+官方文档：[流式语音识别 WebSocket 鉴权](https://www.volcengine.com/docs/6561/1354869?lang=zh)
 
-## 新版配置（推荐）
+## 配置
 
 按时长计费的模型 2.0 使用默认 Resource ID 时，只需配置 API Key：
 
@@ -37,25 +37,6 @@
   }
 }
 ```
-
-## 旧版控制台兼容配置
-
-旧版语音应用仍可以使用原有字段：
-
-```json
-{
-  "asr": {
-    "provider": "volcengine",
-    "appKey": "replace-with-app-id",
-    "accessKey": "replace-with-access-token",
-    "resourceId": "replace-with-resource-id"
-  }
-}
-```
-
-旧版 `appKey` 对应 `X-Api-App-Key`，必须填写 APP ID；`accessKey` 对应
-`X-Api-Access-Key`，必须填写豆包语音应用的 Access Token，不是 IAM Secret Access Key。
-如果配置中同时存在 `apiKey` 和旧版字段，程序只发送新版 `X-Api-Key`。
 
 默认 endpoint 是
 `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async`。只有官方文档为已开通资源给出

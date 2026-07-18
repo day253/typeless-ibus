@@ -18,8 +18,8 @@
 文件权限设置为 `0600`。日志不会输出完整凭据；请求失败时记录的是用于排查的
 `x-tt-logid`。
 
-其他云端 provider 的 `apiKey`，以及火山引擎旧版配置的 `appKey` 与 `accessKey`，保存在
-`~/.config/typeless-ibus/config.json`，该文件同样使用 `0600` 权限，但内容是明文。
+其他云端 provider 的 `apiKey` 保存在 `~/.config/typeless-ibus/config.json`，该文件同样
+使用 `0600` 权限，但内容是明文。
 日志不会打印密钥。请避免把真实配置提交到 Git，并优先使用 HTTPS/WSS endpoint。
 
 ## 协议风险

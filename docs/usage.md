@@ -117,7 +117,7 @@
 | `bailian` | `wss://dashscope.aliyuncs.com/api-ws/v1/inference/` | `fun-asr-realtime` | `apiKey` |
 | `bailian-qwen3-realtime` | `wss://dashscope.aliyuncs.com/api-ws/v1/realtime` | `qwen3-asr-flash-realtime` | `apiKey` |
 | `bailian-fun-asr-flash` | DashScope multimodal-generation 标准地址 | `fun-asr-flash-2026-06-15` | `apiKey` |
-| `volcengine` | `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` | 服务端大模型 | `apiKey`；兼容旧版 `appKey` + `accessKey` |
+| `volcengine` | `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` | 服务端大模型 | `apiKey` |
 
 百炼经典实时可以额外填写 `vocabularyId`；Qwen3 Realtime 可以填写 `language`，不填时
 自动识别。火山引擎新版控制台只需填写 `apiKey`；可以用 `resourceId` 覆盖默认值
@@ -125,7 +125,7 @@
 （火山引擎没有客户端 model 字段）。
 
 ASR 供应商只由配置文件决定，不从环境变量或残留凭据推断。配置文件权限为 `0600`，但
-`apiKey`、`appKey`、`accessKey` 仍是明文保存；使用自建 endpoint 时也应确认网络可信。
+`apiKey` 仍是明文保存；使用自建 endpoint 时也应确认网络可信。
 `openai-compatible`、五个品牌化 Audio Transcriptions provider、`elevenlabs`、
 `xiaomi-mimo-asr` 和 `bailian-fun-asr-flash` 在录音结束后上传；豆包、百炼两种实时协议
 与火山引擎会持续返回中间文本。

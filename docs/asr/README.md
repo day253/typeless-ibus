@@ -58,7 +58,7 @@ chmod 600 ~/.config/typeless-ibus/config.json
 
 ## 凭据安全
 
-`apiKey`、`appKey` 和 `accessKey` 会以明文保存在本机配置文件中，但不会写入日志。
+`apiKey` 会以明文保存在本机配置文件中，但不会写入日志。
 不要把真实配置提交到 Git，也不要把完整 Key 粘贴到 issue。遇到上游错误时可提供日志中的
 请求 ID 或 `x-tt-logid`，无需提供密钥。
 
