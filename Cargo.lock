@@ -2052,6 +2052,7 @@ name = "typeless-ibus"
 version = "0.5.3"
 dependencies = [
  "anyhow",
+ "base64",
  "cpal",
  "futures-util",
  "http",

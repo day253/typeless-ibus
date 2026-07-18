@@ -28,14 +28,117 @@ pub enum TriggerMode {
 pub enum AsrProviderKind {
     Doubao,
     OpenaiCompatible,
+    Whisper,
+    Groq,
+    Openrouter,
+    Siliconflow,
+    Zhipu,
+    Elevenlabs,
+    XiaomiMimoAsr,
+    Bailian,
+    BailianQwen3Realtime,
+    BailianFunAsrFlash,
+    Volcengine,
 }
 
 impl AsrProviderKind {
+    pub const ALL: [Self; 13] = [
+        Self::Doubao,
+        Self::OpenaiCompatible,
+        Self::Whisper,
+        Self::Groq,
+        Self::Openrouter,
+        Self::Siliconflow,
+        Self::Zhipu,
+        Self::Elevenlabs,
+        Self::XiaomiMimoAsr,
+        Self::Bailian,
+        Self::BailianQwen3Realtime,
+        Self::BailianFunAsrFlash,
+        Self::Volcengine,
+    ];
+
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Doubao => "doubao",
             Self::OpenaiCompatible => "openai-compatible",
+            Self::Whisper => "whisper",
+            Self::Groq => "groq",
+            Self::Openrouter => "openrouter",
+            Self::Siliconflow => "siliconflow",
+            Self::Zhipu => "zhipu",
+            Self::Elevenlabs => "elevenlabs",
+            Self::XiaomiMimoAsr => "xiaomi-mimo-asr",
+            Self::Bailian => "bailian",
+            Self::BailianQwen3Realtime => "bailian-qwen3-realtime",
+            Self::BailianFunAsrFlash => "bailian-fun-asr-flash",
+            Self::Volcengine => "volcengine",
         }
+    }
+
+    pub const fn default_endpoint(self) -> &'static str {
+        match self {
+            Self::Doubao => "",
+            Self::OpenaiCompatible => "https://api.openai.com/v1/audio/transcriptions",
+            Self::Whisper => "https://api.openai.com/v1/audio/transcriptions",
+            Self::Groq => "https://api.groq.com/openai/v1/audio/transcriptions",
+            Self::Openrouter => "https://openrouter.ai/api/v1/audio/transcriptions",
+            Self::Siliconflow => "https://api.siliconflow.cn/v1/audio/transcriptions",
+            Self::Zhipu => "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions",
+            Self::Elevenlabs => "https://api.elevenlabs.io/v1/speech-to-text",
+            Self::XiaomiMimoAsr => "https://api.xiaomimimo.com/v1/chat/completions",
+            Self::Bailian => "wss://dashscope.aliyuncs.com/api-ws/v1/inference/",
+            Self::BailianQwen3Realtime => "wss://dashscope.aliyuncs.com/api-ws/v1/realtime",
+            Self::BailianFunAsrFlash => {
+                "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
+            }
+            Self::Volcengine => "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async",
+        }
+    }
+
+    pub const fn default_model(self) -> &'static str {
+        match self {
+            Self::Doubao | Self::Volcengine => "",
+            Self::OpenaiCompatible | Self::Whisper => "whisper-1",
+            Self::Groq => "whisper-large-v3-turbo",
+            Self::Openrouter => "openai/whisper-large-v3-turbo",
+            Self::Siliconflow => "FunAudioLLM/SenseVoiceSmall",
+            Self::Zhipu => "glm-asr-2512",
+            Self::Elevenlabs => "scribe_v2",
+            Self::XiaomiMimoAsr => "mimo-v2.5-asr",
+            Self::Bailian => "fun-asr-realtime",
+            Self::BailianQwen3Realtime => "qwen3-asr-flash-realtime",
+            Self::BailianFunAsrFlash => "fun-asr-flash-2026-06-15",
+        }
+    }
+
+    pub const fn is_websocket(self) -> bool {
+        matches!(
+            self,
+            Self::Bailian | Self::BailianQwen3Realtime | Self::Volcengine
+        )
+    }
+
+    pub const fn requires_api_key(self) -> bool {
+        matches!(
+            self,
+            Self::Whisper
+                | Self::Groq
+                | Self::Openrouter
+                | Self::Siliconflow
+                | Self::Zhipu
+                | Self::Elevenlabs
+                | Self::XiaomiMimoAsr
+                | Self::Bailian
+                | Self::BailianQwen3Realtime
+                | Self::BailianFunAsrFlash
+        )
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|provider| provider.as_str() == value)
     }
 }
 
@@ -53,6 +156,14 @@ pub struct AsrConfig {
     pub language: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vocabulary_id: Option<String>,
 }
 
 impl Default for AsrConfig {
@@ -64,45 +175,87 @@ impl Default for AsrConfig {
             model: None,
             language: None,
             prompt: None,
+            app_key: None,
+            access_key: None,
+            resource_id: None,
+            vocabulary_id: None,
         }
     }
 }
 
 impl AsrConfig {
-    pub const DEFAULT_OPENAI_ENDPOINT: &'static str =
-        "https://api.openai.com/v1/audio/transcriptions";
-    pub const DEFAULT_OPENAI_MODEL: &'static str = "whisper-1";
+    pub const DEFAULT_VOLCENGINE_RESOURCE_ID: &'static str = "volc.seedasr.sauc.duration";
 
     pub fn endpoint(&self) -> &str {
         self.endpoint
             .as_deref()
-            .unwrap_or(Self::DEFAULT_OPENAI_ENDPOINT)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| self.provider.default_endpoint())
     }
 
     pub fn model(&self) -> &str {
-        self.model.as_deref().unwrap_or(Self::DEFAULT_OPENAI_MODEL)
+        self.model
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| self.provider.default_model())
+    }
+
+    pub fn api_key(&self) -> Option<&str> {
+        non_empty(self.api_key.as_deref())
+    }
+
+    pub fn app_key(&self) -> Option<&str> {
+        non_empty(self.app_key.as_deref())
+    }
+
+    pub fn access_key(&self) -> Option<&str> {
+        non_empty(self.access_key.as_deref())
+    }
+
+    pub fn resource_id(&self) -> &str {
+        non_empty(self.resource_id.as_deref()).unwrap_or(Self::DEFAULT_VOLCENGINE_RESOURCE_ID)
     }
 
     pub fn validate(&self) -> Result<()> {
-        if self.provider == AsrProviderKind::OpenaiCompatible {
+        if self.provider != AsrProviderKind::Doubao {
             let endpoint =
                 reqwest::Url::parse(self.endpoint()).context("asr.endpoint 必须是有效的 URL")?;
-            if !matches!(endpoint.scheme(), "http" | "https") {
-                bail!("asr.endpoint 只支持 http 或 https URL");
+            if self.provider.is_websocket() {
+                if !matches!(endpoint.scheme(), "ws" | "wss") {
+                    bail!(
+                        "{} 的 asr.endpoint 必须使用 ws 或 wss",
+                        self.provider.as_str()
+                    );
+                }
+            } else if !matches!(endpoint.scheme(), "http" | "https") {
+                bail!(
+                    "{} 的 asr.endpoint 必须使用 http 或 https",
+                    self.provider.as_str()
+                );
             }
-            if self.model().trim().is_empty() {
+            if self.provider != AsrProviderKind::Volcengine && self.model().trim().is_empty() {
                 bail!("asr.model 不能为空");
             }
         }
-        if self
-            .api_key
-            .as_deref()
-            .is_some_and(|value| value.trim().is_empty())
-        {
-            bail!("asr.apiKey 不能是空字符串；无密钥服务请删除该字段");
+        if self.provider.requires_api_key() && self.api_key().is_none() {
+            bail!("{} 需要 asr.apiKey", self.provider.as_str());
+        }
+        if self.provider == AsrProviderKind::Volcengine {
+            if self.app_key().is_none() {
+                bail!("volcengine 需要 asr.appKey");
+            }
+            if self.access_key().is_none() {
+                bail!("volcengine 需要 asr.accessKey");
+            }
         }
         Ok(())
     }
+}
+
+fn non_empty(value: Option<&str>) -> Option<&str> {
+    value.map(str::trim).filter(|value| !value.is_empty())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -323,8 +476,14 @@ mod tests {
         let mut config = Config::default();
         config.asr.provider = AsrProviderKind::OpenaiCompatible;
         assert!(config.validate().is_ok());
-        assert_eq!(config.asr.endpoint(), AsrConfig::DEFAULT_OPENAI_ENDPOINT);
-        assert_eq!(config.asr.model(), AsrConfig::DEFAULT_OPENAI_MODEL);
+        assert_eq!(
+            config.asr.endpoint(),
+            AsrProviderKind::OpenaiCompatible.default_endpoint()
+        );
+        assert_eq!(
+            config.asr.model(),
+            AsrProviderKind::OpenaiCompatible.default_model()
+        );
 
         config.asr.endpoint = Some("file:///tmp/asr".to_string());
         assert!(config.validate().is_err());
@@ -336,5 +495,80 @@ mod tests {
         assert_eq!(value["asr"]["provider"], "doubao");
         assert!(value["asr"].get("apiKey").is_none());
         assert!(value["asr"].get("endpoint").is_none());
+    }
+
+    #[test]
+    fn every_configured_cloud_provider_has_protocol_defaults() {
+        let providers = [
+            AsrProviderKind::OpenaiCompatible,
+            AsrProviderKind::Whisper,
+            AsrProviderKind::Groq,
+            AsrProviderKind::Openrouter,
+            AsrProviderKind::Siliconflow,
+            AsrProviderKind::Zhipu,
+            AsrProviderKind::Elevenlabs,
+            AsrProviderKind::XiaomiMimoAsr,
+            AsrProviderKind::Bailian,
+            AsrProviderKind::BailianQwen3Realtime,
+            AsrProviderKind::BailianFunAsrFlash,
+            AsrProviderKind::Volcengine,
+        ];
+        for provider in providers {
+            assert!(!provider.default_endpoint().is_empty());
+            if provider != AsrProviderKind::Volcengine {
+                assert!(!provider.default_model().is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn every_provider_id_round_trips_through_json_and_cli_parsing() {
+        for provider in AsrProviderKind::ALL {
+            assert_eq!(AsrProviderKind::parse(provider.as_str()), Some(provider));
+            assert_eq!(
+                serde_json::to_value(provider).unwrap(),
+                serde_json::Value::String(provider.as_str().to_string())
+            );
+            assert_eq!(
+                serde_json::from_value::<AsrProviderKind>(serde_json::Value::String(
+                    provider.as_str().to_string()
+                ))
+                .unwrap(),
+                provider
+            );
+        }
+    }
+
+    #[test]
+    fn credentialed_cloud_providers_require_their_selected_keys() {
+        for provider in [
+            AsrProviderKind::Whisper,
+            AsrProviderKind::Groq,
+            AsrProviderKind::Openrouter,
+            AsrProviderKind::Siliconflow,
+            AsrProviderKind::Zhipu,
+            AsrProviderKind::Elevenlabs,
+            AsrProviderKind::XiaomiMimoAsr,
+            AsrProviderKind::Bailian,
+            AsrProviderKind::BailianQwen3Realtime,
+            AsrProviderKind::BailianFunAsrFlash,
+        ] {
+            let mut config = AsrConfig {
+                provider,
+                ..AsrConfig::default()
+            };
+            assert!(config.validate().is_err(), "{}", provider.as_str());
+            config.api_key = Some("secret".to_string());
+            assert!(config.validate().is_ok(), "{}", provider.as_str());
+        }
+
+        let mut volcengine = AsrConfig {
+            provider: AsrProviderKind::Volcengine,
+            ..AsrConfig::default()
+        };
+        assert!(volcengine.validate().is_err());
+        volcengine.app_key = Some("app".to_string());
+        volcengine.access_key = Some("access".to_string());
+        assert!(volcengine.validate().is_ok());
     }
 }

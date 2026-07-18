@@ -1,5 +1,10 @@
+mod bailian_realtime;
+mod cloud_batch;
 mod openai_compatible;
 mod provider;
+mod shared;
+mod volcengine;
+mod volcengine_frame;
 
 use anyhow::{Context, Result, anyhow, bail};
 use futures_util::{SinkExt, StreamExt};
@@ -21,8 +26,11 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use typeless_ibus::config::{AsrConfig, AsrProviderKind};
 use uuid::Uuid;
 
+use self::bailian_realtime::BailianRealtimeProvider;
+use self::cloud_batch::CloudBatchProvider;
 use self::openai_compatible::OpenaiCompatibleProvider;
 use self::provider::{AsrProvider, DiagnosticFuture, EventHandler, RecognitionFuture};
+use self::volcengine::VolcengineProvider;
 
 const REGISTER_URL: &str = "https://log.snssdk.com/service/2/device_register/";
 const SETTINGS_URL: &str = "https://is.snssdk.com/service/settings/v3/";
@@ -75,9 +83,21 @@ fn configured_provider(
         AsrProviderKind::Doubao => Ok(Box::new(DoubaoProvider {
             credentials_path: credentials_path.to_path_buf(),
         })),
-        AsrProviderKind::OpenaiCompatible => {
-            Ok(Box::new(OpenaiCompatibleProvider::new(config.clone())?))
+        AsrProviderKind::OpenaiCompatible
+        | AsrProviderKind::Whisper
+        | AsrProviderKind::Groq
+        | AsrProviderKind::Siliconflow
+        | AsrProviderKind::Zhipu => Ok(Box::new(OpenaiCompatibleProvider::new(config.clone())?)),
+        AsrProviderKind::Elevenlabs
+        | AsrProviderKind::Openrouter
+        | AsrProviderKind::XiaomiMimoAsr
+        | AsrProviderKind::BailianFunAsrFlash => {
+            Ok(Box::new(CloudBatchProvider::new(config.clone())?))
         }
+        AsrProviderKind::Bailian | AsrProviderKind::BailianQwen3Realtime => {
+            Ok(Box::new(BailianRealtimeProvider::new(config.clone())?))
+        }
+        AsrProviderKind::Volcengine => Ok(Box::new(VolcengineProvider::new(config.clone())?)),
     }
 }
 
@@ -1535,5 +1555,23 @@ mod tests {
         let provider =
             configured_provider(&AsrConfig::default(), Path::new("credentials.json")).unwrap();
         assert_eq!(provider.kind(), AsrProviderKind::Doubao);
+    }
+
+    #[test]
+    fn provider_factory_routes_every_cloud_protocol() {
+        for kind in AsrProviderKind::ALL {
+            let mut config = AsrConfig {
+                provider: kind,
+                api_key: Some("api-key".to_string()),
+                app_key: Some("app-key".to_string()),
+                access_key: Some("access-key".to_string()),
+                ..AsrConfig::default()
+            };
+            if kind == AsrProviderKind::Doubao {
+                config.api_key = None;
+            }
+            let provider = configured_provider(&config, Path::new("credentials.json")).unwrap();
+            assert_eq!(provider.kind(), kind);
+        }
     }
 }

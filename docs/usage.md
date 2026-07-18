@@ -55,13 +55,13 @@
 - `triggerMode`：`hold` 表示按下开始、松开结束；`toggle` 表示按一次开始、再按一次结束。
 - `inputDevice`：`null` 使用默认麦克风，也可以填写设备名称。
 - `maxRecordingSeconds`：允许 1 到 600 秒。
-- `asr.provider`：默认 `doubao`；只有显式配置为 `openai-compatible` 时才使用其他接口。
+- `asr.provider`：默认 `doubao`；只有显式配置其他值时才切换云端接口。
 
 `doubao` 是零配置默认项，不需要用户填写账号、API Key、endpoint 或 model。引擎首次
 识别时会自动获取凭据，之后在服务发现拒绝旧身份时自动刷新。已有配置文件即使完全没有
 `asr` 字段，也仍按 `doubao` 运行。
 
-### OpenAI-compatible ASR
+### 云端 ASR 配置
 
 实现标准的 `audio/transcriptions` multipart 接口的服务可以这样配置：
 
@@ -87,9 +87,44 @@
 - `model`：可选，默认 `whisper-1`。
 - `language`、`prompt`：可选，空值不会发送。
 
+其他云端 provider 都带有默认 endpoint 和 model，通常只需要写供应商 ID 与凭据：
+
+```json
+{
+  "asr": {
+    "provider": "elevenlabs",
+    "apiKey": "your-api-key"
+  }
+}
+```
+
+可用值与默认值：
+
+| `provider` | 默认 endpoint | 默认 model | 必需凭据 |
+| --- | --- | --- | --- |
+| `openai-compatible` | `https://api.openai.com/v1/audio/transcriptions` | `whisper-1` | 无；目标服务需要时填写 `apiKey` |
+| `whisper` | `https://api.openai.com/v1/audio/transcriptions` | `whisper-1` | `apiKey` |
+| `groq` | `https://api.groq.com/openai/v1/audio/transcriptions` | `whisper-large-v3-turbo` | `apiKey` |
+| `openrouter` | `https://openrouter.ai/api/v1/audio/transcriptions` | `openai/whisper-large-v3-turbo` | `apiKey` |
+| `siliconflow` | `https://api.siliconflow.cn/v1/audio/transcriptions` | `FunAudioLLM/SenseVoiceSmall` | `apiKey` |
+| `zhipu` | `https://open.bigmodel.cn/api/paas/v4/audio/transcriptions` | `glm-asr-2512` | `apiKey` |
+| `elevenlabs` | `https://api.elevenlabs.io/v1/speech-to-text` | `scribe_v2` | `apiKey` |
+| `xiaomi-mimo-asr` | `https://api.xiaomimimo.com/v1/chat/completions` | `mimo-v2.5-asr` | `apiKey` |
+| `bailian` | `wss://dashscope.aliyuncs.com/api-ws/v1/inference/` | `fun-asr-realtime` | `apiKey` |
+| `bailian-qwen3-realtime` | `wss://dashscope.aliyuncs.com/api-ws/v1/realtime` | `qwen3-asr-flash-realtime` | `apiKey` |
+| `bailian-fun-asr-flash` | DashScope multimodal-generation 标准地址 | `fun-asr-flash-2026-06-15` | `apiKey` |
+| `volcengine` | `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` | 服务端大模型 | `appKey`、`accessKey` |
+
+百炼经典实时可以额外填写 `vocabularyId`；Qwen3 Realtime 可以填写 `language`，不填时
+自动识别。火山引擎可以用 `resourceId` 覆盖默认值
+`volc.seedasr.sauc.duration`。所有 provider 都允许用 `endpoint`、`model` 覆盖默认值
+（火山引擎没有客户端 model 字段）。
+
 ASR 供应商只由配置文件决定，不从环境变量或残留凭据推断。配置文件权限为 `0600`，但
-`apiKey` 仍是明文保存；使用自建 HTTP 服务时也应确认网络可信。OpenAI-compatible 当前
-是录音结束后整段上传，因此不会像豆包实时接口一样持续返回中间文本。
+`apiKey`、`appKey`、`accessKey` 仍是明文保存；使用自建 endpoint 时也应确认网络可信。
+`openai-compatible`、五个品牌化 Audio Transcriptions provider、`elevenlabs`、
+`xiaomi-mimo-asr` 和 `bailian-fun-asr-flash` 在录音结束后上传；豆包、百炼两种实时协议
+与火山引擎会持续返回中间文本。
 
 手动修改 JSON 后切换一次输入源即可重新读取。配置示例也可查看
 [`data/config.example.json`](../data/config.example.json)。

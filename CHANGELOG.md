@@ -10,10 +10,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - A Rust ASR provider interface that isolates IBus sessions from vendor-specific protocols.
-- An opt-in OpenAI-compatible `audio/transcriptions` provider with configurable endpoint, model,
-  optional Bearer API key, language, and prompt.
-- Unit coverage for legacy configuration compatibility, provider selection, WAV encoding, and a
-  mock multipart transcription endpoint.
+- Opt-in cloud providers for OpenAI-compatible transcription, OpenAI Whisper, Groq, OpenRouter,
+  SiliconFlow, Zhipu, ElevenLabs Scribe, Xiaomi MiMo, Alibaba Cloud Model Studio classic
+  realtime/Qwen3 Realtime/Fun-ASR-Flash, and Volcengine SAUC.
+- Provider-specific endpoint, model, API key, Volcengine key, resource, language, prompt, and
+  vocabulary configuration fields.
+- Local mock coverage for every HTTP and WebSocket wire protocol, plus configuration compatibility,
+  provider routing, WAV encoding, long-audio splitting, and request ID handling.
 
 ### Changed
 

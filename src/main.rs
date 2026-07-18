@@ -157,11 +157,8 @@ fn run_config_command(mut arguments: impl Iterator<Item = String>) -> Result<()>
                         value.parse().expect("recording limit was validated");
                 }
                 "asr-provider" => {
-                    config.asr.provider = match value.as_str() {
-                        "doubao" => AsrProviderKind::Doubao,
-                        "openai-compatible" => AsrProviderKind::OpenaiCompatible,
-                        _ => unreachable!("ASR provider was validated"),
-                    }
+                    config.asr.provider =
+                        AsrProviderKind::parse(&value).expect("ASR provider was validated")
                 }
                 _ => unreachable!("configuration key was validated"),
             })?;
@@ -195,9 +192,16 @@ fn validate_config_assignment(key: &str, value: &str) -> Result<()> {
                 bail!("max-recording-seconds 必须在 1 到 600 之间")
             }
         }
-        "asr-provider" if matches!(value, "doubao" | "openai-compatible") => Ok(()),
+        "asr-provider" if AsrProviderKind::parse(value).is_some() => Ok(()),
         "asr-provider" => {
-            bail!("asr-provider 只支持 doubao 或 openai-compatible")
+            bail!(
+                "asr-provider 只支持：{}",
+                AsrProviderKind::ALL
+                    .iter()
+                    .map(|provider| provider.as_str())
+                    .collect::<Vec<_>>()
+                    .join("、")
+            )
         }
         _ => bail!(
             "未知配置项：{key}；可用 trigger-key、trigger-mode、input-device、max-recording-seconds、asr-provider"

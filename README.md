@@ -19,8 +19,9 @@ already using.
 - **System-native controls**: change the trigger key and recording mode from the IBus input-source menu, with English and Chinese labels selected from the system locale.
 - **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit, Python runtime, or LLM.
 - **Zero-config speech recognition**: Doubao is the default provider and automatically obtains its
-  own credentials; no account or API key is required. An OpenAI-compatible endpoint can be selected
-  explicitly in the JSON configuration.
+  own credentials; no account or API key is required. JSON configuration can instead select
+  OpenAI, Groq, OpenRouter, SiliconFlow, Zhipu, ElevenLabs, Xiaomi MiMo, Alibaba Cloud Model
+  Studio, Volcengine, or another OpenAI-compatible ASR endpoint.
 - **Broad Linux support**: native amd64/arm64 `.deb` builds cover Ubuntu 20.04–26.04 and Debian
   11 Bullseye, 12 Bookworm, and 13 Trixie; native x86_64/aarch64 `.rpm` builds cover Fedora 43/44
   and openSUSE Tumbleweed; Arch Linux is protocol-tested; Nix covers both Linux architectures.
