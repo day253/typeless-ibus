@@ -72,7 +72,7 @@ tail -f ~/.local/state/typeless-ibus/logs/typeless-ibus.latest.jsonl
 可用于排查对应的上游请求。
 
 正式输入遇到 `service discovery failure` 时会先等待 2 秒，再获取新凭据并重放当前音频；
-第二次失败不会无限重试。`40200011`/`concurrency quota exceeded` 属于上游并发额度错误，
-不会通过刷新本地凭据解决。
+第二次失败不会无限重试。`40200011`/`concurrency quota exceeded` 也会等待 2 秒后用当前
+凭据重试一次，但不会刷新本地凭据；这两类错误都不会无限重试。
 
 [返回文档索引](README.md)

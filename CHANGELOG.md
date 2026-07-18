@@ -38,6 +38,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   English-default system in a China time zone, and omit hints for providers that cannot accept them.
 - Credential recovery after a Doubao service-discovery failure now waits two seconds before
   registering and retrying, avoiding an immediate second upstream connection.
+- Doubao concurrency-quota failures now also wait two seconds and retry the buffered audio once
+  with the current credentials, without rotating credentials.
 
 ## [0.5.3] - 2026-07-18
 

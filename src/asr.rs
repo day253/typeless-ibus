@@ -489,6 +489,26 @@ where
             }
             Ok(text)
         }
+        Err(error) if is_concurrency_quota_error(&error) => {
+            tracing::warn!(
+                error = %format_args!("{error:#}"),
+                buffered_frames = buffered_audio.len(),
+                retry_delay_ms = ASR_RETRY_DELAY.as_millis() as u64,
+                "ASR concurrency quota exceeded; backing off before retrying with the current credentials"
+            );
+            tokio::time::sleep(ASR_RETRY_DELAY).await;
+            transcribe_attempt(
+                &mut audio_rx,
+                &credentials,
+                &mut buffered_audio,
+                &mut source_finished,
+                true,
+                &mut transcript,
+                &mut on_event,
+            )
+            .await
+            .context("退避后重试 ASR 并发请求失败")
+        }
         Err(error) => Err(error),
     }
 }
@@ -942,6 +962,24 @@ fn is_service_discovery_error(error: &anyhow::Error) -> bool {
                     service_error.status_code,
                     &service_error.status_message,
                 )
+            })
+    })
+}
+
+fn is_concurrency_quota_error(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        cause
+            .downcast_ref::<AsrServiceError>()
+            .is_some_and(|service_error| {
+                service_error.status_code == 40_200_011
+                    || service_error
+                        .status_message
+                        .to_ascii_lowercase()
+                        .contains("concurrency quota exceeded")
+                    || service_error
+                        .status_message
+                        .to_ascii_lowercase()
+                        .contains("concurrent request limit")
             })
     })
 }
@@ -1541,6 +1579,16 @@ mod tests {
             ..Default::default()
         });
         assert!(!is_service_discovery_error(&unrelated));
+        assert!(is_concurrency_quota_error(&unrelated));
+
+        let by_message = asr_response_error(&AsrResponse {
+            message_type: "SessionFailed".to_string(),
+            status_code: 2,
+            service_name: "ws".to_string(),
+            status_message: "concurrency quota exceeded".to_string(),
+            ..Default::default()
+        });
+        assert!(is_concurrency_quota_error(&by_message));
     }
 
     #[test]
