@@ -498,6 +498,18 @@ mod tests {
     }
 
     #[test]
+    fn packaged_example_is_a_valid_default_config() {
+        let config: Config =
+            serde_json::from_str(include_str!("../data/config.example.json")).unwrap();
+
+        assert_eq!(config.asr.provider, AsrProviderKind::Doubao);
+        assert_eq!(config.asr.endpoint, None);
+        assert_eq!(config.asr.api_key, None);
+        assert_eq!(config.asr.app_key, None);
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
     fn every_configured_cloud_provider_has_protocol_defaults() {
         let providers = [
             AsrProviderKind::OpenaiCompatible,

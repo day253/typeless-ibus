@@ -4,6 +4,15 @@
   "inputDevice": null,
   "maxRecordingSeconds": 600,
   "asr": {
-    "provider": "doubao"
+    "provider": "doubao",
+    "endpoint": null,
+    "apiKey": null,
+    "model": null,
+    "language": null,
+    "prompt": null,
+    "appKey": null,
+    "accessKey": null,
+    "resourceId": null,
+    "vocabularyId": null
   }
 }
