@@ -56,6 +56,7 @@ Detailed documentation is currently maintained in Chinese:
 - [Installation and removal](docs/installation.md)
 - [Distribution support](docs/distributions.md)
 - [Usage and configuration](docs/usage.md)
+- [Per-provider ASR configuration](docs/asr/README.md)
 - [Architecture and design](docs/architecture.md)
 - [ASR providers and extension design](docs/asr-providers.md)
 - [Development and validation](docs/development.md)

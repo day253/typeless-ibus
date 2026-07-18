@@ -1,22 +1,26 @@
 # ASR 供应商
 
+账号开通、凭据获取、可复制 JSON 和真实音频验证命令见
+[ASR 供应商配置索引](asr/README.md)。该索引按供应商拆分为独立文档；本页只说明协议
+范围与实现边界。
+
 ## 当前支持
 
 | 配置值 | 模式 | 凭据 | 状态 |
 | --- | --- | --- | --- |
-| `doubao` | 实时 WebSocket，PCM 转 Opus | 自动获取并刷新 | 默认，零配置 |
-| `openai-compatible` | 录音结束后 multipart HTTP，PCM 转 WAV | 可选 Bearer API Key | 显式配置 |
-| `whisper` | OpenAI Audio Transcriptions multipart | `apiKey` | 显式配置 |
-| `groq` | Groq Audio Transcriptions multipart | `apiKey` | 显式配置 |
-| `openrouter` | Audio Transcriptions JSON + base64 WAV | `apiKey` | 显式配置 |
-| `siliconflow` | Audio Transcriptions multipart | `apiKey` | 显式配置 |
-| `zhipu` | Audio Transcriptions multipart | `apiKey` | 显式配置 |
-| `elevenlabs` | Scribe multipart HTTP | `apiKey` | 显式配置 |
-| `xiaomi-mimo-asr` | `chat/completions` 音频 JSON | `apiKey` | 显式配置 |
-| `bailian` | DashScope 经典双工 WebSocket | `apiKey` | 显式配置 |
-| `bailian-qwen3-realtime` | Qwen3 Realtime WebSocket | `apiKey` | 显式配置 |
-| `bailian-fun-asr-flash` | DashScope 多模态批量 HTTP | `apiKey` | 显式配置 |
-| `volcengine` | SAUC 大模型流式 WebSocket | `appKey`、`accessKey` | 显式配置 |
+| [`doubao`](asr/doubao.md) | 实时 WebSocket，PCM 转 Opus | 自动获取并刷新 | 默认，零配置 |
+| [`openai-compatible`](asr/openai-compatible.md) | 录音结束后 multipart HTTP，PCM 转 WAV | 可选 Bearer API Key | 显式配置 |
+| [`whisper`](asr/openai.md) | OpenAI Audio Transcriptions multipart | `apiKey` | 显式配置 |
+| [`groq`](asr/groq.md) | Groq Audio Transcriptions multipart | `apiKey` | 显式配置 |
+| [`openrouter`](asr/openrouter.md) | Audio Transcriptions JSON + base64 WAV | `apiKey` | 显式配置 |
+| [`siliconflow`](asr/siliconflow.md) | Audio Transcriptions multipart | `apiKey` | 显式配置 |
+| [`zhipu`](asr/zhipu.md) | Audio Transcriptions multipart | `apiKey` | 显式配置 |
+| [`elevenlabs`](asr/elevenlabs.md) | Scribe multipart HTTP | `apiKey` | 显式配置 |
+| [`xiaomi-mimo-asr`](asr/xiaomi-mimo.md) | `chat/completions` 音频 JSON | `apiKey` | 显式配置 |
+| [`bailian`](asr/alibaba-bailian.md) | DashScope 经典双工 WebSocket | `apiKey` | 显式配置 |
+| [`bailian-qwen3-realtime`](asr/alibaba-bailian.md) | Qwen3 Realtime WebSocket | `apiKey` | 显式配置 |
+| [`bailian-fun-asr-flash`](asr/alibaba-bailian.md) | DashScope 多模态批量 HTTP | `apiKey` | 显式配置 |
+| [`volcengine`](asr/volcengine.md) | SAUC 大模型流式 WebSocket | `appKey`、`accessKey` | 显式配置 |
 
 `openai-compatible` 面向实现标准 multipart `audio/transcriptions` 请求和
 `{ "text": "..." }` 响应的服务。同一个适配器可以连接其他兼容厂商或自定义云端服务。
