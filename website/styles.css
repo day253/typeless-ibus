@@ -882,10 +882,13 @@ main {
   color: var(--purple-dark);
 }
 
-.preedit-ellipsis,
-.listening-dots {
+.preedit-ellipsis {
   color: #918995;
   letter-spacing: 0.14em;
+}
+
+.listening-dots {
+  color: #918995;
 }
 
 .send-button {

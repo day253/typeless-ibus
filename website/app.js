@@ -15,7 +15,8 @@ const translations = {
     notesTitle: "今天的笔记",
     noteDate: "星期六 · 7月18日",
     noteHeading: "周末计划",
-    listening: "…",
+    listening: "请说话…",
+    listeningEllipsis: "…",
     status: "状态",
     storyEyebrow: "一次顺手的输入",
     storyTitle: "不用离开键盘。<br>也不用打断思路。",
@@ -29,7 +30,7 @@ const translations = {
     stepOneTitle: "光标放在任何输入框",
     stepOneBody: "聊天、浏览器、笔记或终端。Typeless 是输入法，不挑应用。",
     stepTwoTitle: "按住你的触发键，开始说",
-    stepTwoBody: "默认是 Fn，也能改成左右 Ctrl、F8、F9、F10 或空格；灰色的三个点会告诉你它已准备好。",
+    stepTwoBody: "默认是 Fn，也能改成左右 Ctrl、F8、F9、F10 或空格；“请说话…”会告诉你它已准备好。",
     stepThreeTitle: "文字跟着声音生长",
     stepThreeBody: "识别结果以原生 IBus 预编辑文本出现，长句和停顿也不会丢掉前文。",
     stepFourTitle: "松开，直接写入",
@@ -62,7 +63,7 @@ const translations = {
     readSource: "查看源代码",
     footer: "为 Linux 做的一件小事 · Rust + IBus · MIT License",
     demoReady: "准备好了",
-    demoListening: "…",
+    demoListening: "请说话…",
     demoRecognizing: "正在识别",
     demoInserted: "已写入",
     demoPartial: "今天下午三点，",
@@ -84,7 +85,8 @@ const translations = {
     notesTitle: "Today’s notes",
     noteDate: "Saturday · July 18",
     noteHeading: "Weekend plan",
-    listening: "…",
+    listening: "Please speak…",
+    listeningEllipsis: "…",
     status: "Status",
     storyEyebrow: "Input that stays out of the way",
     storyTitle: "Stay on the keyboard.<br>Stay in your thought.",
@@ -98,7 +100,7 @@ const translations = {
     stepOneTitle: "Focus any text field",
     stepOneBody: "Chat, browser, notes, or terminal. Typeless is an input method, so it works across apps.",
     stepTwoTitle: "Hold your trigger key and talk",
-    stepTwoBody: "Fn is the default, or choose left/right Ctrl, F8, F9, F10, or Space. Three quiet gray dots confirm it is ready.",
+    stepTwoBody: "Fn is the default, or choose left/right Ctrl, F8, F9, F10, or Space. “Please speak…” confirms it is ready.",
     stepThreeTitle: "Text grows with your voice",
     stepThreeBody: "Results appear as native IBus preedit text. Long sentences and pauses keep their earlier words.",
     stepFourTitle: "Release to write",
@@ -131,7 +133,7 @@ const translations = {
     readSource: "Read the source",
     footer: "One small thing for Linux · Rust + IBus · MIT License",
     demoReady: "Ready",
-    demoListening: "…",
+    demoListening: "Please speak…",
     demoRecognizing: "Recognizing",
     demoInserted: "Inserted",
     demoPartial: "At three this afternoon, ",
@@ -210,7 +212,7 @@ function renderStage(stage) {
     composePreedit.append(document.createTextNode(copy.demoPartial));
     const dots = document.createElement("span");
     dots.className = "preedit-ellipsis";
-    dots.textContent = copy.listening;
+    dots.textContent = copy.listeningEllipsis;
     composePreedit.append(dots);
   }
   composeCaret.hidden = currentStage === 3;

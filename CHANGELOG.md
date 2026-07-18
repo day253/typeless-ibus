@@ -19,8 +19,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Daily local JSONL logs with seven-file retention, final recognition transcripts, per-session UUIDs,
   request correlation, and the application context exposed by IBus without storing recorded audio.
 - The recording prompt now shows the actual microphone in IBus auxiliary text and reports a missing
-  audio input device separately. The preedit now keeps a muted gray `…` after the current
-  uncommitted transcript, replacing the `Listening…`/`聆听中…` labels.
+  audio input device separately. The device name is now a transient startup hint, while the preedit
+  starts with `Please speak…`/`请说话…` and then keeps a muted gray `…` after the current
+  uncommitted transcript.
 
 ### Changed
 

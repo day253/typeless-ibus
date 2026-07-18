@@ -19,6 +19,9 @@ const RELEASE_MASK: u32 = 1 << 30;
 const IBUS_ATTR_TYPE_FOREGROUND: u32 = 2;
 const MUTED_ELLIPSIS_RGB: u32 = 0x888888;
 const LISTENING_ELLIPSIS: &str = "…";
+const PLEASE_SPEAK_ENGLISH: &str = "Please speak";
+const PLEASE_SPEAK_CHINESE: &str = "请说话";
+const AUDIO_DEVICE_PROMPT_DURATION: Duration = Duration::from_secs(2);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Phase {
@@ -222,7 +225,25 @@ impl VoiceEngine {
 
         let device_message = format!("{}{}", i18n::text("Microphone: ", "麦克风："), audio_device);
         let _ = Self::update_auxiliary_text(emitter, ibus_text(device_message), true).await;
-        update_preedit(emitter, "").await;
+        update_preedit(
+            emitter,
+            i18n::text(PLEASE_SPEAK_ENGLISH, PLEASE_SPEAK_CHINESE),
+        )
+        .await;
+
+        let prompt_emitter = emitter.to_owned();
+        let prompt_session = self.session.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(AUDIO_DEVICE_PROMPT_DURATION).await;
+            if is_recording(&prompt_session, generation) {
+                let _ = VoiceEngine::update_auxiliary_text(
+                    &prompt_emitter,
+                    ibus_text(String::new()),
+                    false,
+                )
+                .await;
+            }
+        });
 
         let owned_emitter = emitter.to_owned();
         let session = self.session.clone();
@@ -585,7 +606,7 @@ async fn run_recognition(
                         return;
                     }
                     match event {
-                        AsrEvent::SpeechStarted => update_preedit(&emitter, &latest_text).await,
+                        AsrEvent::SpeechStarted => {}
                         AsrEvent::Partial(text) | AsrEvent::Final(text) => {
                             latest_text.clone_from(&text);
                             update_preedit(&emitter, &text).await;
@@ -721,6 +742,11 @@ fn is_current(session: &Arc<Mutex<SessionState>>, generation: u64) -> bool {
     session.generation == generation && session.phase != Phase::Idle
 }
 
+fn is_recording(session: &Arc<Mutex<SessionState>>, generation: u64) -> bool {
+    let session = lock_session(session);
+    session.generation == generation && session.phase == Phase::Recording
+}
+
 fn lock_session(session: &Arc<Mutex<SessionState>>) -> MutexGuard<'_, SessionState> {
     session.lock().unwrap_or_else(|error| error.into_inner())
 }
@@ -826,6 +852,8 @@ mod tests {
     fn listening_preedit_appends_a_muted_ellipsis() {
         assert_eq!(LISTENING_ELLIPSIS, "…");
         assert_eq!("中间文本…", format!("中间文本{LISTENING_ELLIPSIS}"));
+        assert_eq!(PLEASE_SPEAK_ENGLISH, "Please speak");
+        assert_eq!(PLEASE_SPEAK_CHINESE, "请说话");
         assert_eq!(MUTED_ELLIPSIS_RGB, 0x888888);
         assert_eq!(
             ibus_listening_preedit("中间文本").value_signature(),
@@ -883,5 +911,19 @@ mod tests {
         let prompt = format!("{}{}", "麦克风：", "USB Microphone");
         assert_eq!(prompt, "麦克风：USB Microphone");
         assert!(!prompt.contains(LISTENING_ELLIPSIS));
+    }
+
+    #[test]
+    fn device_prompt_timer_only_clears_an_active_recording() {
+        let session = Arc::new(Mutex::new(SessionState {
+            phase: Phase::Recording,
+            generation: 8,
+            capture: None,
+            log_context: None,
+        }));
+        assert!(is_recording(&session, 8));
+        assert!(!is_recording(&session, 7));
+        lock_session(&session).phase = Phase::Processing;
+        assert!(!is_recording(&session, 8));
     }
 }
