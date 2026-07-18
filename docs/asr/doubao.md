@@ -3,7 +3,7 @@
 豆包是 typeless-ibus 的默认供应商，`provider` 为 `doubao`。它不要求注册账号，也没有需要
 用户获取的 API Key、endpoint 或 model。
 
-## 配置
+## 最小配置示例
 
 把以下对象合并到 `~/.config/typeless-ibus/config.json`：
 
@@ -16,6 +16,19 @@
 ```
 
 配置文件完全没有 `asr` 字段时也会使用该默认值。
+
+## 最大配置示例
+
+豆包的用户配置没有 `apiKey`、`endpoint`、`model` 或其他可选字段，因此最大配置与最小
+配置相同：
+
+```json
+{
+  "asr": {
+    "provider": "doubao"
+  }
+}
+```
 
 ## 凭据如何获得
 

@@ -16,7 +16,25 @@
 
 不要仅凭“OpenAI-compatible”判断它支持语音；很多兼容服务只实现文本接口。
 
-## 配置
+## 最小配置示例
+
+只填写 `provider + apiKey` 时使用内置的 OpenAI Audio Transcriptions endpoint 和
+`whisper-1` 模型：
+
+```json
+{
+  "asr": {
+    "provider": "openai-compatible",
+    "apiKey": "replace-with-provider-api-key"
+  }
+}
+```
+
+如果目标接口明确无需鉴权，可以删除 `apiKey`；除此之外不要把空字符串当成省略字段。
+
+## 最大配置示例
+
+连接其他兼容服务时可以显式覆盖全部通用转写字段：
 
 ```json
 {
@@ -26,13 +44,13 @@
     "apiKey": "replace-with-provider-api-key",
     "model": "replace-with-transcription-model-id",
     "language": "zh",
-    "prompt": ""
+    "prompt": "Linux 语音输入"
   }
 }
 ```
 
-`endpoint` 必须是完整 URL。若目标服务不需要鉴权，删除 `apiKey` 整行以及前一行末尾的
-逗号；不要把字符串留空来代替删除。
+`endpoint` 必须是完整 URL。`language` 和 `prompt` 只有在目标服务声明支持时才保留；若
+目标服务不需要鉴权，删除 `apiKey` 整行以及相邻的多余逗号。
 
 ## 验证
 

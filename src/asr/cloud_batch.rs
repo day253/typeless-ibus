@@ -1,8 +1,8 @@
 use super::AsrEvent;
 use super::provider::{AsrProvider, DiagnosticFuture, EventHandler, RecognitionFuture};
 use super::shared::{
-    collect_pcm, encode_wav, extract_request_id, http_client, join_transcripts, non_empty,
-    print_diagnosis, split_pcm,
+    collect_pcm, encode_wav, extract_request_id, http_client, join_transcripts, print_diagnosis,
+    split_pcm,
 };
 use anyhow::{Context, Result, bail};
 use base64::Engine;
@@ -96,7 +96,7 @@ impl CloudBatchProvider {
             .text("model_id", self.config.model().to_string())
             .text("tag_audio_events", "false")
             .text("timestamps_granularity", "none");
-        if let Some(language) = non_empty(self.config.language.as_deref()) {
+        if let Some(language) = self.config.language() {
             form = form.text("language_code", language.to_string());
         }
         let response = self

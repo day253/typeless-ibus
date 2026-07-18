@@ -14,7 +14,7 @@ OpenRouter 预设的 `provider` 为 `openrouter`。它使用专用 Speech-to-Tex
 官方说明：[API Key 鉴权](https://openrouter.ai/docs/api/reference/authentication) ·
 [Speech-to-Text](https://openrouter.ai/docs/guides/overview/multimodal/stt)
 
-## 配置
+## 最小配置示例
 
 ```json
 {
@@ -25,18 +25,22 @@ OpenRouter 预设的 `provider` 为 `openrouter`。它使用专用 Speech-to-Tex
 }
 ```
 
-当前默认 model 是 `openai/whisper-large-v3-turbo`，默认 endpoint 是
-`https://openrouter.ai/api/v1/audio/transcriptions`。选择其他模型时显式覆盖：
+## 最大配置示例
+
+显式列出 endpoint 与 model：
 
 ```json
 {
   "asr": {
     "provider": "openrouter",
+    "endpoint": "https://openrouter.ai/api/v1/audio/transcriptions",
     "apiKey": "replace-with-openrouter-api-key",
     "model": "openai/whisper-large-v3"
   }
 }
 ```
+
+当前默认 model 是 `openai/whisper-large-v3-turbo`。选择其他模型时显式覆盖。
 
 模型目录会变化；遇到 `model not found` 时重新从 STT 集合复制 slug，不要猜模型名。
 typeless-ibus 会把长录音按 30 秒切片后识别并合并。

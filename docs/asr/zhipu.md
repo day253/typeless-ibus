@@ -13,7 +13,7 @@
 官方入口：[HTTP API 与 Key 获取步骤](https://docs.bigmodel.cn/cn/guide/develop/http/introduction) ·
 [GLM-ASR-2512 模型说明](https://docs.bigmodel.cn/cn/guide/models/sound-and-video/glm-asr-2512)
 
-## 配置
+## 最小配置示例
 
 ```json
 {
@@ -24,8 +24,23 @@
 }
 ```
 
-默认 endpoint 是 `https://open.bigmodel.cn/api/paas/v4/audio/transcriptions`。一般不需要
-填写 `endpoint` 或 `model`。不要把编码套餐的专属文本 endpoint 用于 ASR。
+## 最大配置示例
+
+```json
+{
+  "asr": {
+    "provider": "zhipu",
+    "endpoint": "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions",
+    "apiKey": "replace-with-zhipu-api-key",
+    "model": "glm-asr-2512",
+    "language": "zh",
+    "prompt": "Linux 语音输入"
+  }
+}
+```
+
+一般不需要填写 `endpoint` 或 `model`。`language` 和 `prompt` 只有在当前模型接口声明支持时
+才保留；不要把编码套餐的专属文本 endpoint 用于 ASR。
 
 ## 验证
 

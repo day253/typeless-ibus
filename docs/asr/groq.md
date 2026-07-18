@@ -13,34 +13,36 @@ Groq 预设的 `provider` 为 `groq`，使用兼容 OpenAI Audio Transcriptions 
 模型与接口限制以 Groq 官方
 [Speech to Text 文档](https://console.groq.com/docs/speech-to-text)为准。
 
-## 配置
+## 最小配置示例
 
 ```json
 {
   "asr": {
     "provider": "groq",
-    "apiKey": "replace-with-groq-api-key",
-    "language": "zh"
+    "apiKey": "replace-with-groq-api-key"
   }
 }
 ```
 
-默认 endpoint 是 `https://api.groq.com/openai/v1/audio/transcriptions`，默认 model 是
-`whisper-large-v3-turbo`。需要更高精度时可按官方模型列表覆盖：
+## 最大配置示例
+
+显式覆盖 endpoint、model、language 和 prompt：
 
 ```json
 {
   "asr": {
     "provider": "groq",
+    "endpoint": "https://api.groq.com/openai/v1/audio/transcriptions",
     "apiKey": "replace-with-groq-api-key",
     "model": "whisper-large-v3",
-    "language": "zh"
+    "language": "zh",
+    "prompt": "Linux 语音输入"
   }
 }
 ```
 
-`language` 和 `prompt` 可选。`language` 使用 ISO-639-1 代码；已知语言时填写可减少识别
-延迟。
+默认 model 是 `whisper-large-v3-turbo`。`language` 使用 ISO-639-1 代码；已知语言时填写
+可减少识别延迟。覆盖模型时应从官方列表复制准确 ID。
 
 ## 验证
 

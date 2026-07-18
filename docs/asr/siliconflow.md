@@ -14,7 +14,7 @@ SiliconFlow 预设的 `provider` 为 `siliconflow`，使用 Audio Transcriptions
 官方入口：[快速上手](https://docs.siliconflow.cn/cn/userguide/quickstart) ·
 [音频转写 API](https://docs.siliconflow.com/en/api-reference/audio/create-audio-transcriptions)
 
-## 配置
+## 最小配置示例
 
 ```json
 {
@@ -25,7 +25,9 @@ SiliconFlow 预设的 `provider` 为 `siliconflow`，使用 Audio Transcriptions
 }
 ```
 
-如果账号使用国际站，或控制台给出的 API Host 不是中国站地址，请同时覆盖完整 endpoint：
+## 最大配置示例
+
+如果账号使用国际站，或需要覆盖全部通用转写字段：
 
 ```json
 {
@@ -33,13 +35,16 @@ SiliconFlow 预设的 `provider` 为 `siliconflow`，使用 Audio Transcriptions
     "provider": "siliconflow",
     "endpoint": "https://api.siliconflow.com/v1/audio/transcriptions",
     "apiKey": "replace-with-siliconflow-api-key",
-    "model": "FunAudioLLM/SenseVoiceSmall"
+    "model": "FunAudioLLM/SenseVoiceSmall",
+    "language": "zh",
+    "prompt": "Linux 语音输入"
   }
 }
 ```
 
 Key、endpoint 和模型必须属于同一站点；不要混用 `.cn` Key 与 `.com` endpoint。模型下线
-或改名时，从控制台模型列表复制新的音频转写 model ID。
+或改名时，从控制台模型列表复制新的音频转写 model ID。`language` 和 `prompt` 只有在所选
+模型声明支持时才保留。
 
 ## 验证
 

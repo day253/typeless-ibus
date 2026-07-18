@@ -13,29 +13,32 @@ OpenAI 预设的 `provider` 为 `whisper`。名称是为兼容项目早期配置
 官方入口：[Developer quickstart](https://platform.openai.com/docs/quickstart) ·
 [Audio Transcriptions API](https://platform.openai.com/docs/api-reference/audio)
 
-## 配置
+## 最小配置示例
 
-使用项目默认的 `whisper-1`：
+使用内置 endpoint 和默认 `whisper-1` 模型，只需 `provider + apiKey`：
 
 ```json
 {
   "asr": {
     "provider": "whisper",
-    "apiKey": "replace-with-openai-api-key",
-    "language": "zh"
+    "apiKey": "replace-with-openai-api-key"
   }
 }
 ```
 
-要选择其他模型，增加 `model`，例如：
+## 最大配置示例
+
+以下示例显式列出该适配器支持的全部覆盖字段：
 
 ```json
 {
   "asr": {
     "provider": "whisper",
+    "endpoint": "https://api.openai.com/v1/audio/transcriptions",
     "apiKey": "replace-with-openai-api-key",
     "model": "gpt-4o-transcribe",
-    "language": "zh"
+    "language": "zh",
+    "prompt": "Linux 语音输入"
   }
 }
 ```

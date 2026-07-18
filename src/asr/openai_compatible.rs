@@ -1,8 +1,8 @@
 use super::AsrEvent;
 use super::provider::{AsrProvider, DiagnosticFuture, EventHandler, RecognitionFuture};
 use super::shared::{
-    collect_pcm, encode_wav, extract_request_id, http_client, join_transcripts, non_empty,
-    print_diagnosis, split_pcm,
+    collect_pcm, encode_wav, extract_request_id, http_client, join_transcripts, print_diagnosis,
+    split_pcm,
 };
 use anyhow::{Context, Result, bail};
 use reqwest::multipart::{Form, Part};
@@ -67,10 +67,10 @@ impl OpenaiCompatibleProvider {
         let mut form = Form::new()
             .part("file", file)
             .text("model", self.config.model().to_string());
-        if let Some(language) = non_empty(self.config.language.as_deref()) {
+        if let Some(language) = self.config.language() {
             form = form.text("language", language.to_string());
         }
-        if let Some(prompt) = non_empty(self.config.prompt.as_deref()) {
+        if let Some(prompt) = self.config.prompt() {
             form = form.text("prompt", prompt.to_string());
         }
 
@@ -78,7 +78,7 @@ impl OpenaiCompatibleProvider {
             .client
             .post(provider_url(&self.config)?)
             .multipart(form);
-        if let Some(api_key) = non_empty(self.config.api_key.as_deref()) {
+        if let Some(api_key) = self.config.api_key() {
             request = request.bearer_auth(api_key);
         }
         let response = request

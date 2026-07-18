@@ -13,7 +13,7 @@
 官方入口：[First API Call 与 Key 获取](https://mimo.mi.com/docs/en-US/quick-start/summary/first-api-call) ·
 [MiMo-V2.5-ASR 接口](https://mimo.mi.com/docs/en-US/api/audio/Speech-Recognition)
 
-## 配置
+## 最小配置示例
 
 ```json
 {
@@ -24,9 +24,24 @@
 }
 ```
 
+## 最大配置示例
+
+显式列出当前适配器会读取的全部字段：
+
+```json
+{
+  "asr": {
+    "provider": "xiaomi-mimo-asr",
+    "endpoint": "https://api.xiaomimimo.com/v1/chat/completions",
+    "apiKey": "replace-with-mimo-api-key",
+    "model": "mimo-v2.5-asr"
+  }
+}
+```
+
 默认 endpoint 是 `https://api.xiaomimimo.com/v1/chat/completions`。typeless-ibus 使用
 官方支持的 `Authorization: Bearer` 鉴权，不需要添加 `api-key` 请求头。当前适配器不读取
-`language` 或 `prompt`；模型自行识别语言。
+`language` 或 `prompt`，因此最大配置也不包含这两个字段；模型自行识别语言。
 
 MiMo Token Plan 的 Key 以 `tp-` 开头并使用独立 Base URL。只有在对应套餐明确包含
 `mimo-v2.5-asr` 时才应使用，并把控制台提供的完整 Chat Completions URL 写入

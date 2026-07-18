@@ -112,6 +112,21 @@ impl AsrProviderKind {
         }
     }
 
+    pub const fn default_language(self) -> Option<&'static str> {
+        None
+    }
+
+    pub const fn default_prompt(self) -> Option<&'static str> {
+        None
+    }
+
+    pub const fn default_resource_id(self) -> Option<&'static str> {
+        match self {
+            Self::Volcengine => Some("volc.seedasr.sauc.duration"),
+            _ => None,
+        }
+    }
+
     pub const fn is_websocket(self) -> bool {
         matches!(
             self,
@@ -159,8 +174,6 @@ pub struct AsrConfig {
     pub prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vocabulary_id: Option<String>,
 }
 
 impl Default for AsrConfig {
@@ -173,14 +186,11 @@ impl Default for AsrConfig {
             language: None,
             prompt: None,
             resource_id: None,
-            vocabulary_id: None,
         }
     }
 }
 
 impl AsrConfig {
-    pub const DEFAULT_VOLCENGINE_RESOURCE_ID: &'static str = "volc.seedasr.sauc.duration";
-
     pub fn endpoint(&self) -> &str {
         self.endpoint
             .as_deref()
@@ -201,8 +211,18 @@ impl AsrConfig {
         non_empty(self.api_key.as_deref())
     }
 
+    pub fn language(&self) -> Option<&str> {
+        non_empty(self.language.as_deref()).or_else(|| self.provider.default_language())
+    }
+
+    pub fn prompt(&self) -> Option<&str> {
+        non_empty(self.prompt.as_deref()).or_else(|| self.provider.default_prompt())
+    }
+
     pub fn resource_id(&self) -> &str {
-        non_empty(self.resource_id.as_deref()).unwrap_or(Self::DEFAULT_VOLCENGINE_RESOURCE_ID)
+        non_empty(self.resource_id.as_deref())
+            .or_else(|| self.provider.default_resource_id())
+            .unwrap_or("")
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -505,6 +525,22 @@ mod tests {
     }
 
     #[test]
+    fn rejects_removed_vocabulary_id() {
+        let error = serde_json::from_str::<Config>(
+            r#"{
+                "asr": {
+                    "provider": "bailian",
+                    "apiKey": "key",
+                    "vocabularyId": "removed"
+                }
+            }"#,
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("unknown field `vocabularyId`"));
+    }
+
+    #[test]
     fn every_configured_cloud_provider_has_protocol_defaults() {
         let providers = [
             AsrProviderKind::OpenaiCompatible,
@@ -524,6 +560,35 @@ mod tests {
             assert!(!provider.default_endpoint().is_empty());
             if provider != AsrProviderKind::Volcengine {
                 assert!(!provider.default_model().is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn every_provider_accepts_minimal_configuration_and_resolves_defaults() {
+        for provider in AsrProviderKind::ALL {
+            let config = AsrConfig {
+                provider,
+                api_key: (provider != AsrProviderKind::Doubao).then(|| "api-key".to_string()),
+                ..AsrConfig::default()
+            };
+
+            assert!(config.validate().is_ok(), "{}", provider.as_str());
+            if provider == AsrProviderKind::Doubao {
+                assert_eq!(config.endpoint(), "");
+                assert_eq!(config.model(), "");
+            } else {
+                assert!(!config.endpoint().is_empty(), "{}", provider.as_str());
+                if provider != AsrProviderKind::Volcengine {
+                    assert!(!config.model().is_empty(), "{}", provider.as_str());
+                }
+            }
+            assert_eq!(config.language(), None, "{}", provider.as_str());
+            assert_eq!(config.prompt(), None, "{}", provider.as_str());
+            if provider == AsrProviderKind::Volcengine {
+                assert_eq!(config.resource_id(), "volc.seedasr.sauc.duration");
+            } else {
+                assert_eq!(config.resource_id(), "");
             }
         }
     }

@@ -86,7 +86,6 @@ impl BailianRealtimeProvider {
             .send(Message::Text(classic_run_task(
                 &task_id,
                 self.config.model(),
-                self.config.vocabulary_id.as_deref(),
             )))
             .await
             .context("发送百炼 run-task 失败")?;
@@ -215,9 +214,7 @@ impl BailianRealtimeProvider {
             "connected to ASR provider"
         );
         socket
-            .send(Message::Text(qwen_session_update(
-                self.config.language.as_deref(),
-            )))
+            .send(Message::Text(qwen_session_update(self.config.language())))
             .await
             .context("发送百炼 Qwen3 session.update 失败")?;
 
@@ -389,11 +386,7 @@ where
         .context("发送百炼 Qwen3 音频失败")
 }
 
-fn classic_run_task(task_id: &str, model: &str, vocabulary_id: Option<&str>) -> String {
-    let mut parameters = json!({ "sample_rate": 16000, "format": "pcm" });
-    if let Some(vocabulary_id) = non_empty(vocabulary_id) {
-        parameters["vocabulary_id"] = Value::String(vocabulary_id.to_string());
-    }
+fn classic_run_task(task_id: &str, model: &str) -> String {
     json!({
         "header": { "action": "run-task", "task_id": task_id, "streaming": "duplex" },
         "payload": {
@@ -401,7 +394,7 @@ fn classic_run_task(task_id: &str, model: &str, vocabulary_id: Option<&str>) -> 
             "task": "asr",
             "function": "recognition",
             "model": model,
-            "parameters": parameters,
+            "parameters": { "sample_rate": 16000, "format": "pcm" },
             "input": {}
         }
     })
@@ -511,9 +504,10 @@ mod tests {
 
     #[test]
     fn classic_messages_match_dashscope_protocol() {
-        let run: Value = serde_json::from_str(&classic_run_task("task", "model", None)).unwrap();
+        let run: Value = serde_json::from_str(&classic_run_task("task", "model")).unwrap();
         assert_eq!(run["header"]["action"], "run-task");
         assert_eq!(run["payload"]["parameters"]["sample_rate"], 16000);
+        assert!(run["payload"]["parameters"].get("vocabulary_id").is_none());
         let finish: Value = serde_json::from_str(&classic_finish_task("task")).unwrap();
         assert_eq!(finish["header"]["action"], "finish-task");
     }

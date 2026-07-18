@@ -13,8 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Opt-in cloud providers for OpenAI-compatible transcription, OpenAI Whisper, Groq, OpenRouter,
   SiliconFlow, Zhipu, ElevenLabs Scribe, Xiaomi MiMo, Alibaba Cloud Model Studio classic
   realtime/Qwen3 Realtime/Fun-ASR-Flash, and Volcengine SAUC.
-- Provider-specific endpoint, model, API key, Volcengine key, resource, language, prompt, and
-  vocabulary configuration fields.
+- Provider-specific endpoint, model, API key, resource, language, and prompt configuration fields.
 - Local mock coverage for every HTTP and WebSocket wire protocol, plus configuration compatibility,
   provider routing, WAV encoding, long-audio splitting, and request ID handling.
 
@@ -25,6 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - ASR diagnostics and audio fixtures now exercise the provider selected by the JSON configuration.
 - Volcengine SAUC now uses the latest single `apiKey` authentication.
 - The product website now presents the supported cloud ASR providers and a prominent typeless logo.
+- Every cloud provider now accepts a minimal `provider + apiKey` configuration and resolves all
+  other supported fields through runtime defaults; the unused `vocabularyId` field was removed.
 
 ## [0.5.3] - 2026-07-18
 

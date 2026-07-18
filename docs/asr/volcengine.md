@@ -12,7 +12,7 @@
 
 官方文档：[流式语音识别 WebSocket 鉴权](https://www.volcengine.com/docs/6561/1354869?lang=zh)
 
-## 配置
+## 最小配置示例
 
 按时长计费的模型 2.0 使用默认 Resource ID 时，只需配置 API Key：
 
@@ -26,14 +26,18 @@
 ```
 
 程序会把 `apiKey` 写入 `X-Api-Key` 请求头，并自动发送默认 `resourceId` 和随机连接 ID。
-控制台显示其他资源时再显式填写：
+
+## 最大配置示例
+
+控制台显示其他资源或 endpoint 时，可以显式填写全部支持字段：
 
 ```json
 {
   "asr": {
     "provider": "volcengine",
+    "endpoint": "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async",
     "apiKey": "replace-with-volcengine-app-key",
-    "resourceId": "replace-with-resource-id"
+    "resourceId": "volc.seedasr.sauc.duration"
   }
 }
 ```

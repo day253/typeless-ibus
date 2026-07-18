@@ -5,9 +5,9 @@
 
 | `provider` | 模式 | 默认模型 | 可选字段 |
 | --- | --- | --- | --- |
-| `bailian` | 经典双工 WebSocket，实时 partial | `fun-asr-realtime` | `vocabularyId` |
+| `bailian` | 经典双工 WebSocket，实时 partial | `fun-asr-realtime` | endpoint、model |
 | `bailian-qwen3-realtime` | Qwen Realtime WebSocket，实时 partial | `qwen3-asr-flash-realtime` | `language` |
-| `bailian-fun-asr-flash` | 录音结束后批量 HTTP | `fun-asr-flash-2026-06-15` | 无 |
+| `bailian-fun-asr-flash` | 录音结束后批量 HTTP | `fun-asr-flash-2026-06-15` | endpoint、model |
 
 ## 获取 API Key、地域与 Workspace
 
@@ -25,6 +25,8 @@
 
 ## 方案一：Fun-ASR 经典实时
 
+### 最小配置示例
+
 ```json
 {
   "asr": {
@@ -34,37 +36,40 @@
 }
 ```
 
-默认 endpoint 是 `wss://dashscope.aliyuncs.com/api-ws/v1/inference/`。要使用热词，在百炼
-控制台创建热词表并复制 Vocabulary ID：
+### 最大配置示例
+
+显式列出 endpoint 与 model：
 
 ```json
 {
   "asr": {
     "provider": "bailian",
+    "endpoint": "wss://dashscope.aliyuncs.com/api-ws/v1/inference/",
     "apiKey": "replace-with-bailian-api-key",
-    "vocabularyId": "replace-with-vocabulary-id"
+    "model": "fun-asr-realtime"
   }
 }
 ```
 
-`vocabularyId` 不是 Workspace ID，也不是热词表名称。热词表的创建与适用模型以官方
-[识别准确率说明](https://help.aliyun.com/zh/model-studio/non-realtime-speech-recognition-user-guide)
-为准。
+通常使用内置默认值即可。只有控制台为当前地域或 Workspace 给出不同地址或模型 ID 时才
+覆盖。
 
 ## 方案二：Qwen3 ASR Realtime
+
+### 最小配置示例
 
 ```json
 {
   "asr": {
     "provider": "bailian-qwen3-realtime",
-    "apiKey": "replace-with-bailian-api-key",
-    "language": "zh"
+    "apiKey": "replace-with-bailian-api-key"
   }
 }
 ```
 
-删除 `language` 可让模型自动判断。使用当前 workspace 专属域名时，按控制台地域填写完整
-WebSocket URL，例如北京地域：
+### 最大配置示例
+
+使用当前 workspace 专属域名时，可以显式填写全部支持字段，例如北京地域：
 
 ```json
 {
@@ -78,11 +83,17 @@ WebSocket URL，例如北京地域：
 }
 ```
 
+省略 `language` 时模型会自动判断。默认 endpoint 是
+`wss://dashscope.aliyuncs.com/api-ws/v1/realtime`，默认 model 是
+`qwen3-asr-flash-realtime`。
+
 新加坡等地域的域名不同，请从官方
 [Qwen-ASR Realtime 交互流程](https://help.aliyun.com/en/model-studio/qwen-asr-realtime-interaction-process)
 复制，不要只替换地域字符串。
 
 ## 方案三：Fun-ASR-Flash 批量识别
+
+### 最小配置示例
 
 ```json
 {
@@ -93,9 +104,22 @@ WebSocket URL，例如北京地域：
 }
 ```
 
+### 最大配置示例
+
+```json
+{
+  "asr": {
+    "provider": "bailian-fun-asr-flash",
+    "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+    "apiKey": "replace-with-bailian-api-key",
+    "model": "fun-asr-flash-2026-06-15"
+  }
+}
+```
+
 默认 endpoint 使用中国大陆 DashScope multimodal-generation 地址。若创建 Key 时显示的
-API Host 不同，请按同一地域的模型文档拼出完整 HTTP endpoint 后写入 `endpoint`。
-typeless-ibus 会把超过 180 秒的录音切片后提交。
+API Host 不同，请按同一地域的模型文档拼出完整 HTTP endpoint。typeless-ibus 会把超过
+180 秒的录音切片后提交。
 
 ## 验证
 

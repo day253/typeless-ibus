@@ -286,7 +286,7 @@ mod tests {
         assert!(!request.headers().contains_key("x-api-access-key"));
         assert_eq!(
             request.headers()["x-api-resource-id"],
-            AsrConfig::DEFAULT_VOLCENGINE_RESOURCE_ID
+            "volc.seedasr.sauc.duration"
         );
         assert_eq!(request.headers()["x-api-connect-id"], "connect-id");
     }
@@ -304,7 +304,7 @@ mod tests {
                 assert!(!request.headers().contains_key("x-api-access-key"));
                 assert_eq!(
                     request.headers()["x-api-resource-id"],
-                    AsrConfig::DEFAULT_VOLCENGINE_RESOURCE_ID
+                    "volc.seedasr.sauc.duration"
                 );
                 Ok(response)
             })

@@ -15,9 +15,9 @@ ElevenLabs 预设的 `provider` 为 `elevenlabs`，使用 Speech-to-Text multipa
 官方入口：[API Key 管理与限制](https://elevenlabs.io/docs/overview/administration/workspaces/api-keys) ·
 [Speech-to-Text API](https://elevenlabs.io/docs/api-reference/speech-to-text/convert)
 
-## 配置
+## 最小配置示例
 
-自动检测语言：
+使用内置 endpoint、`scribe_v2` 和自动语言检测：
 
 ```json
 {
@@ -28,21 +28,24 @@ ElevenLabs 预设的 `provider` 为 `elevenlabs`，使用 Speech-to-Text multipa
 }
 ```
 
-已知语言时可以增加 `language`。ElevenLabs 使用 ISO-639-1 或 ISO-639-3 代码，例如普通话
-可写 `zho`：
+## 最大配置示例
+
+显式列出 endpoint、model 和 language。ElevenLabs 使用 ISO-639-1 或 ISO-639-3 代码，
+例如普通话可写 `zho`：
 
 ```json
 {
   "asr": {
     "provider": "elevenlabs",
+    "endpoint": "https://api.elevenlabs.io/v1/speech-to-text",
     "apiKey": "replace-with-elevenlabs-api-key",
+    "model": "scribe_v2",
     "language": "zho"
   }
 }
 ```
 
-默认 endpoint 是 `https://api.elevenlabs.io/v1/speech-to-text`。引擎会以 `xi-api-key`
-请求头发送配置中的 `apiKey`，无需用户手动添加前缀。
+引擎会以 `xi-api-key` 请求头发送配置中的 `apiKey`，无需用户手动添加前缀。
 
 ## 验证
 
