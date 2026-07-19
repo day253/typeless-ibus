@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           typeless-ibus
-Version:        0.5.3
+Version:        0.6.0
 Release:        1%{?dist}
 Summary:        Native IBus voice input engine for Linux
 
@@ -48,11 +48,15 @@ sed 's|/usr/libexec/typeless-ibus-engine|%{_libexecdir}/typeless-ibus-engine|' \
 
 %files
 %license LICENSE
-%doc README.md README_zh.md CHANGELOG.md docs/THIRD_PARTY.md data/config.example.json
+%doc README.md README_zh.md CHANGELOG.md docs/THIRD_PARTY.md data/config.example.json data/config.llm.example.json
 %{_libexecdir}/typeless-ibus-engine
 %{_datadir}/ibus/component/typeless.xml
 
 %changelog
+* Mon Jul 20 2026 day253 <9634619+day253@users.noreply.github.com> - 0.6.0-1
+- Add optional multi-provider LLM cleanup with safe fallback and diagnostics.
+- Retain original ASR text in private local logs for before/after rewrite evaluation.
+
 * Sat Jul 18 2026 day253 <9634619+day253@users.noreply.github.com> - 0.5.3-1
 - Add the interactive bilingual GitHub Pages product website.
 - Generate the website version automatically from Cargo.toml.

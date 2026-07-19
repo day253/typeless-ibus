@@ -3,7 +3,7 @@
   <name>org.freedesktop.IBus.Typeless</name>
   <description>typeless-ibus native voice input engine</description>
   <exec>/usr/libexec/typeless-ibus-engine</exec>
-  <version>0.5.3</version>
+  <version>0.6.0</version>
   <author>day253</author>
   <license>MIT</license>
   <homepage>https://github.com/day253/typeless-ibus</homepage>

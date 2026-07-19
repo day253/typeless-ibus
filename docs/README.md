@@ -14,6 +14,7 @@
 3. [使用与配置](usage.md)：添加输入源、长按说话、调整触发键和 JSON 配置。
 4. [选择 ASR 供应商](asr/README.md)：复制最小配置，获取 API Key，需要时覆盖默认值。
 5. [语种选择与回退](languages.md)：系统 locale、时区、provider 能力和手动覆盖优先级。
+6. [LLM 润色供应商](llm/README.md)：可选最终稿清理、供应商配置、安全跳过与原文回退。
 
 默认 `doubao` provider 不需要账号或 API Key；想直接开始使用可先阅读
 [豆包零配置 ASR](asr/doubao.md)。

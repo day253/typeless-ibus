@@ -64,6 +64,24 @@ IBus 可以向引擎提供光标矩形、输入用途、输入提示和客户端
 `voice_session.started` 和 `voice_session.finished` 还会记录实际打开的 `audio_device` 名称，
 用于确认当前会话使用的是默认设备还是配置中指定的设备。
 
+配置 LLM 后，完成事件增加：
+
+| 字段 | 含义 |
+| --- | --- |
+| `llm_provider`、`llm_model` | 实际选择的品牌 provider 和 model |
+| `llm_status` | `disabled`、`skipped`、`succeeded`、`fallback` 或未运行时的 `not_run` |
+| `llm_duration_ms` | 润色与必要重试的总耗时 |
+| `llm_request_id` | 响应 Header 或响应体中的上游请求 ID |
+| `llm_changed` | 最终提交文本是否与 ASR 原文不同 |
+| `llm_original_transcript` | 进入 LLM 润色流程前的 ASR 原文，用于和最终 `transcript` 对比 |
+| `llm_input_characters`、`llm_output_characters` | 润色前后字符数 |
+| `llm_input_tokens`、`llm_output_tokens` | 供应商返回的 token 用量；缺失时为 `0` |
+| `llm_fallback_reason` | 跳过或回退原因，如 `password_input`、`timeout`、`protected_token_changed` |
+
+`transcript` 始终保存真正提交的最终文本。LLM 已启用且文本进入润色流程时，
+`llm_original_transcript` 额外保存润色前的 ASR 原文；`llm_status` 为 `disabled` 或 `skipped`
+时该字段为空。密码或 PIN 输入框会记录脱敏标记，并把这两个文本字段都留空。
+
 ## 保存和排除的数据
 
 日志会保存：
@@ -73,6 +91,7 @@ IBus 可以向引擎提供光标矩形、输入用途、输入提示和客户端
 - 实际打开的音频设备名称；
 - IBus 可用的应用上下文；
 - 上游返回的 `x-tt-logid`、`request_id` 等排障 ID；
+- 可选 LLM 的状态、耗时、模型、请求 ID、token 数和润色前的 ASR 原文；
 - 脱敏后的错误信息。
 
 日志不会保存：
@@ -81,9 +100,10 @@ IBus 可以向引擎提供光标矩形、输入用途、输入提示和客户端
 - API Key、Token、豆包设备凭据；
 - 剪贴板、输入框已有文字或周边文本；
 - 窗口截图。
+- 密码或 PIN 输入框中的识别文本。
 
-识别文本本身可能敏感。提交 issue 或把日志发给他人之前，请先删除或替换 `transcript`
-和不希望公开的应用上下文字段。
+识别文本本身可能敏感。提交 issue 或把日志发给他人之前，请先删除或替换 `transcript`、
+`llm_original_transcript` 和不希望公开的应用上下文字段。
 
 ## 查询和清理
 
@@ -92,6 +112,14 @@ IBus 可以向引擎提供光标矩形、输入用途、输入提示和客户端
 ```bash
 jq -r 'select(.event == "voice_session.finished" and .status == "committed") |
   [.timestamp, .ibus_client, .transcript] | @tsv' \
+  ~/.local/state/typeless-ibus/logs/*.jsonl
+```
+
+对比 LLM 润色前后的文本：
+
+```bash
+jq -r 'select(.event == "voice_session.finished" and .llm_original_transcript != "") |
+  [.timestamp, .llm_provider, .llm_original_transcript, .transcript] | @tsv' \
   ~/.local/state/typeless-ibus/logs/*.jsonl
 ```
 

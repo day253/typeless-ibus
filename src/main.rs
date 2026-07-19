@@ -1,12 +1,13 @@
 mod asr;
 mod engine;
 mod ibus;
+mod llm;
 
 use anyhow::{Context, Result, bail};
 use std::path::Path;
 use std::process::ExitCode;
 use typeless_ibus::config::{AsrProviderKind, Config, ConfigStore, TriggerMode};
-use typeless_ibus::{audio, config, i18n, logging, properties};
+use typeless_ibus::{audio, config, i18n, logging, properties, system_preferences};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -79,6 +80,15 @@ async fn run() -> Result<()> {
                 config.trigger_key, config.trigger_mode
             );
             println!("asr.provider: {}", config.asr.provider.as_str());
+            if let Some(llm) = &config.llm {
+                println!(
+                    "llm.provider: {} ({})",
+                    llm.provider.as_str(),
+                    if llm.enabled { "enabled" } else { "disabled" }
+                );
+            } else {
+                println!("llm: disabled");
+            }
             println!("ibus: {}", ibus::ibus_address()?);
             print_audio_devices()?;
             println!("check: ok");
@@ -107,6 +117,21 @@ async fn run() -> Result<()> {
             println!("asr.audio: recognized {text:?}");
             return Ok(());
         }
+        Some("--check-llm") => {
+            let transcript = arguments.next().context("--check-llm 需要一段待润色文本")?;
+            if let Some(extra) = arguments.next() {
+                bail!("--check-llm 收到了多余参数：{extra}");
+            }
+            let path = config::config_path()?;
+            let effective = Config::load_or_create(&path)?;
+            let llm_config = effective
+                .llm
+                .as_ref()
+                .context("LLM 未配置；请先在 config.json 中添加 llm")?;
+            let text = llm::diagnose(llm_config, &transcript).await?;
+            println!("llm.output: {text}");
+            return Ok(());
+        }
         Some("--ibus") | None => {}
         Some(argument) => bail!("未知参数：{argument}；使用 --help 查看帮助"),
     }
@@ -120,6 +145,12 @@ async fn run() -> Result<()> {
         trigger = %effective.trigger_key,
         mode = ?effective.trigger_mode,
         asr_provider = effective.asr.provider.as_str(),
+        llm_provider = effective
+            .llm
+            .as_ref()
+            .filter(|llm| llm.enabled)
+            .map(|llm| llm.provider.as_str())
+            .unwrap_or("disabled"),
         "starting typeless-ibus engine"
     );
     let _connection = ibus::serve(config, credentials_path).await?;
@@ -257,6 +288,7 @@ fn print_help() {
            --check                 Check configuration, IBus and microphones\n\
            --check-asr             Diagnose ASR APIs without IBus or audio\n\
            --check-asr-audio PATH  Recognize a 16 kHz mono s16le PCM fixture\n\
+           --check-llm TEXT        Rewrite one text using the configured LLM\n\
            --list-devices          List microphone devices\n\
            --config-path           Print configuration path\n\
            --log-path              Print the latest local log path\n\

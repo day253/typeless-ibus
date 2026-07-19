@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="typeless-ibus 是面向 Linux 的原生 IBus 语音输入法。自定义触发键，按住、说话、松开，支持豆包、OpenAI、Groq、百炼、火山引擎等云端 ASR。"
+      content="typeless-ibus 是面向 Linux 的原生 IBus 语音输入法。自定义触发键，按住、说话、松开，支持多家云端 ASR 与可选 LLM 润色。"
     />
     <meta name="theme-color" content="#17111f" />
     <meta property="og:title" content="typeless-ibus — 说出来，文字就到了" />
     <meta
       property="og:description"
-      content="Ubuntu 与 Linux 上轻量、原生的 IBus 语音输入体验，支持自定义触发键和 10+ 云端 ASR 供应商。"
+      content="Ubuntu 与 Linux 上轻量、原生的 IBus 语音输入体验，支持自定义触发键、多家云端 ASR 和安全回退的可选 LLM 润色。"
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://day253.github.io/typeless-ibus/" />
@@ -30,7 +30,7 @@
       <nav class="nav-links" aria-label="页面导航">
         <a href="#experience" data-i18n="navExperience">体验</a>
         <a href="#features" data-i18n="navFeatures">特点</a>
-        <a href="#providers" data-i18n="navProviders">ASR</a>
+        <a href="#providers" data-i18n="navProviders">供应商</a>
         <a href="#support" data-i18n="navSupport">支持</a>
       </nav>
       <div class="header-actions">
@@ -72,7 +72,7 @@
           </div>
           <ul class="hero-facts" aria-label="产品特点">
             <li><span aria-hidden="true">◆</span> Rust</li>
-            <li><span aria-hidden="true">◆</span> <span data-i18n="manyProviders">10+ 云端 ASR</span></li>
+            <li><span aria-hidden="true">◆</span> <span data-i18n="manyProviders">ASR + 可选 LLM</span></li>
             <li><span aria-hidden="true">◆</span> <span data-i18n="customTrigger">触发键可自定义</span></li>
           </ul>
         </div>
@@ -213,8 +213,8 @@
               <p data-i18n="stepThreeBody">识别结果以原生 IBus 预编辑文本出现，长句和停顿也不会丢掉前文。</p>
             </article>
             <article class="story-step" data-stage="3">
-              <span>04</span><h3 data-i18n="stepFourTitle">松开，直接写入</h3>
-              <p data-i18n="stepFourBody">最终文字提交到当前光标，不经过剪贴板，也不模拟粘贴。</p>
+              <span>04</span><h3 data-i18n="stepFourTitle">松开，润色后写入</h3>
+              <p data-i18n="stepFourBody">默认直接提交；配置 LLM 后先轻度润色，失败仍提交 ASR 原文，全程不碰剪贴板。</p>
             </article>
           </div>
         </div>
@@ -224,7 +224,7 @@
         <div class="section-heading reveal">
           <p class="eyebrow"><span></span><span data-i18n="featuresEyebrow">小而专注</span></p>
           <h2 data-i18n="featuresTitle">只做好语音输入。</h2>
-          <p data-i18n="featuresIntro">默认无需账号，也能接入你自己的云端 ASR。没有历史记录或 LLM 改写，只做安静的输入法。</p>
+          <p data-i18n="featuresIntro">默认无需账号；需要时再接入自己的云端 ASR 与 LLM。润色只处理本次最终稿，异常自动回退原文。</p>
         </div>
         <div class="feature-grid">
           <article class="feature-card card-native reveal">
@@ -243,7 +243,7 @@
             <div class="feature-art private-art" aria-hidden="true"><span class="shield">✓</span><span class="no-clipboard">⌘C</span><i></i></div>
             <span class="card-number">03</span>
             <h3 data-i18n="directTitle">直接提交文字</h3>
-            <p data-i18n="directBody">不读取和覆盖剪贴板，不注入快捷键；音频仅用于实时语音识别。</p>
+            <p data-i18n="directBody">不读取和覆盖剪贴板，不注入快捷键；LLM 关闭时文字不会发送到大模型。</p>
           </article>
         </div>
       </section>
@@ -258,13 +258,16 @@
             <p class="eyebrow"><span></span><span data-i18n="providersEyebrow">声音由你选择</span></p>
             <h2 data-i18n="providersTitle">开箱即用，<br />也不被一家服务绑定。</h2>
             <p data-i18n="providersBody">
-              默认豆包无需配置；语种会结合系统语言与时区选择，不支持提示的 provider 自动交给模型检测。需要自己的模型、额度或数据区域时，只改一个 JSON 即可切换。
+              默认豆包 ASR 无需配置；也能通过一个 JSON 选择自己的语音与润色服务。LLM 默认关闭，只处理安全的最终文本并随时回退原文。
             </p>
             <a
               class="provider-doc-link"
               href="./docs/asr/"
             >
               <span data-i18n="providersGuide">查看供应商与语种配置</span><span aria-hidden="true">↗</span>
+            </a>
+            <a class="provider-doc-link" href="./docs/llm/">
+              <span data-i18n="llmGuide">查看 LLM 润色配置</span><span aria-hidden="true">↗</span>
             </a>
           </div>
 

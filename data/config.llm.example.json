@@ -1,0 +1,13 @@
+{
+  "triggerKey": "XF86_Fn",
+  "triggerMode": "hold",
+  "inputDevice": null,
+  "maxRecordingSeconds": 600,
+  "asr": {
+    "provider": "doubao"
+  },
+  "llm": {
+    "provider": "deepseek",
+    "apiKey": "replace-me"
+  }
+}

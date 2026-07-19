@@ -47,7 +47,7 @@
               ln -s ../libexec/typeless-ibus-engine "$out/bin/typeless-ibus-engine"
               substitute data/typeless.xml "$out/share/ibus/component/typeless.xml" \
                 --replace-fail /usr/libexec/typeless-ibus-engine "$out/libexec/typeless-ibus-engine"
-              install -m644 data/config.example.json README.md README_zh.md CHANGELOG.md docs/THIRD_PARTY.md \
+              install -m644 data/config.example.json data/config.llm.example.json README.md README_zh.md CHANGELOG.md docs/THIRD_PARTY.md \
                 -t "$out/share/doc/typeless-ibus"
             '';
 

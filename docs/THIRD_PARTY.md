@@ -40,3 +40,13 @@ OpenLess is licensed under the MIT License:
 > NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 > DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
 > OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## OpenTypeless LLM workflow reference
+
+The final-transcript cleanup boundary, conservative rewriting rules, and shared OpenAI-compatible
+provider approach were informed by [`tover0314-w/opentypeless`](https://github.com/tover0314-w/opentypeless)
+at revision `9063f1a3abdded3725d815c2022653f334e57691`.
+
+OpenTypeless is licensed under the MIT License, Copyright (c) 2025 OpenTypeless Contributors. This
+project does not vendor or execute OpenTypeless; typeless-ibus independently implements a Rust-only
+IBus pipeline with a smaller final-transcript-only scope.

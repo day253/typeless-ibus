@@ -7,8 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-20
+
 ### Added
 
+- Optional LLM cleanup for the final ASR transcript, with OpenAI-compatible and native Anthropic
+  Messages adapters, 12 cloud-provider presets, system-language hints, reviewed app categories,
+  configurable styles, and a standalone `--check-llm` diagnostic.
+- Local output guards that preserve language and critical tokens, plus deterministic skipping for
+  numbers, phone numbers, URLs, email addresses, names, passwords, PINs, terminals, and unknown
+  input purposes.
+- One delayed retry for transient LLM connection, timeout, rate-limit, and server failures, followed
+  by an automatic fallback to the original ASR transcript.
+- Provider-specific LLM setup guides with minimal and complete JSON examples, plus a packaged
+  `config.llm.example.json`.
 - A Rust ASR provider interface that isolates IBus sessions from vendor-specific protocols.
 - Opt-in cloud providers for OpenAI-compatible transcription, OpenAI Whisper, Groq, OpenRouter,
   SiliconFlow, Zhipu, ElevenLabs Scribe, Xiaomi MiMo, Alibaba Cloud Model Studio classic
@@ -25,6 +37,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- ASR final text now remains in IBus preedit until optional LLM cleanup finishes, then commits only
+  once; canceled or stale sessions cannot commit a late rewrite.
+- Session logs now include LLM provider/model/status/duration/request ID/token usage and fallback
+  reason, plus the original ASR transcript for before/after rewrite evaluation. Password and PIN
+  transcripts are redacted from local logs.
 - Doubao remains the zero-configuration default when `asr` is absent, including automatic initial
   credential acquisition and service-discovery credential recovery.
 - ASR diagnostics and audio fixtures now exercise the provider selected by the JSON configuration.

@@ -1,6 +1,6 @@
 [package]
 name = "typeless-ibus"
-version = "0.5.3"
+version = "0.6.0"
 description = "Native IBus voice input engine for Linux"
 authors = ["day253 <9634619+day253@users.noreply.github.com>"]
 license = "MIT"
@@ -49,6 +49,7 @@ assets = [
   ["target/release/typeless-ibus-engine", "usr/libexec/typeless-ibus-engine", "755"],
   ["data/typeless.xml", "usr/share/ibus/component/typeless.xml", "644"],
   ["data/config.example.json", "usr/share/doc/typeless-ibus/config.example.json", "644"],
+  ["data/config.llm.example.json", "usr/share/doc/typeless-ibus/config.llm.example.json", "644"],
   ["README.md", "usr/share/doc/typeless-ibus/README.md", "644"],
   ["README_zh.md", "usr/share/doc/typeless-ibus/README_zh.md", "644"],
   ["CHANGELOG.md", "usr/share/doc/typeless-ibus/CHANGELOG.md", "644"],

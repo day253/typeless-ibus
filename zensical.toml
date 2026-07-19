@@ -1,7 +1,7 @@
 [project]
 site_name = "typeless-ibus 文档"
 site_url = "https://day253.github.io/typeless-ibus/docs/"
-site_description = "typeless-ibus 的安装、配置、ASR 供应商、排障与开发文档。"
+site_description = "typeless-ibus 的安装、配置、ASR 与 LLM 供应商、排障与开发文档。"
 site_author = "day253"
 docs_dir = "docs"
 site_dir = "target/pages/docs"
@@ -30,6 +30,21 @@ nav = [
     "asr/xiaomi-mimo.md",
     "asr/alibaba-bailian.md",
     "asr/volcengine.md",
+  ]},
+  { "LLM 润色" = [
+    "llm/README.md",
+    "llm/openai.md",
+    "llm/anthropic.md",
+    "llm/deepseek.md",
+    "llm/zhipu.md",
+    "llm/siliconflow.md",
+    "llm/gemini.md",
+    "llm/moonshot.md",
+    "llm/doubao.md",
+    "llm/qwen.md",
+    "llm/groq.md",
+    "llm/openrouter.md",
+    "llm/openai-compatible.md",
   ]},
   { "排障与数据" = [
     "troubleshooting.md",

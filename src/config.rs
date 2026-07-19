@@ -42,6 +42,191 @@ pub enum AsrProviderKind {
     Volcengine,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum LlmProviderKind {
+    OpenaiCompatible,
+    Openai,
+    Anthropic,
+    Deepseek,
+    Zhipu,
+    Siliconflow,
+    Gemini,
+    Moonshot,
+    Doubao,
+    Qwen,
+    Groq,
+    Openrouter,
+}
+
+impl LlmProviderKind {
+    pub const ALL: [Self; 12] = [
+        Self::OpenaiCompatible,
+        Self::Openai,
+        Self::Anthropic,
+        Self::Deepseek,
+        Self::Zhipu,
+        Self::Siliconflow,
+        Self::Gemini,
+        Self::Moonshot,
+        Self::Doubao,
+        Self::Qwen,
+        Self::Groq,
+        Self::Openrouter,
+    ];
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::OpenaiCompatible => "openai-compatible",
+            Self::Openai => "openai",
+            Self::Anthropic => "anthropic",
+            Self::Deepseek => "deepseek",
+            Self::Zhipu => "zhipu",
+            Self::Siliconflow => "siliconflow",
+            Self::Gemini => "gemini",
+            Self::Moonshot => "moonshot",
+            Self::Doubao => "doubao",
+            Self::Qwen => "qwen",
+            Self::Groq => "groq",
+            Self::Openrouter => "openrouter",
+        }
+    }
+
+    pub const fn default_endpoint(self) -> &'static str {
+        match self {
+            Self::OpenaiCompatible | Self::Openai => "https://api.openai.com/v1/chat/completions",
+            Self::Anthropic => "https://api.anthropic.com/v1/messages",
+            Self::Deepseek => "https://api.deepseek.com/chat/completions",
+            Self::Zhipu => "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+            Self::Siliconflow => "https://api.siliconflow.cn/v1/chat/completions",
+            Self::Gemini => {
+                "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            }
+            Self::Moonshot => "https://api.moonshot.cn/v1/chat/completions",
+            Self::Doubao => "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+            Self::Qwen => "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+            Self::Groq => "https://api.groq.com/openai/v1/chat/completions",
+            Self::Openrouter => "https://openrouter.ai/api/v1/chat/completions",
+        }
+    }
+
+    pub const fn default_model(self) -> &'static str {
+        match self {
+            Self::OpenaiCompatible | Self::Openai => "gpt-5-mini",
+            Self::Anthropic => "claude-haiku-4-5",
+            Self::Deepseek => "deepseek-v4-flash",
+            Self::Zhipu => "glm-4-flash",
+            Self::Siliconflow => "Qwen/Qwen2.5-7B-Instruct",
+            Self::Gemini => "gemini-3.5-flash",
+            Self::Moonshot => "moonshot-v1-8k",
+            Self::Doubao => "doubao-seed-1-6-flash-250615",
+            Self::Qwen => "qwen3.6-flash",
+            Self::Groq => "qwen/qwen3.6-27b",
+            Self::Openrouter => "openai/gpt-5-mini",
+        }
+    }
+
+    pub const fn uses_anthropic_messages(self) -> bool {
+        matches!(self, Self::Anthropic)
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|provider| provider.as_str() == value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LlmMode {
+    #[default]
+    Smart,
+    Always,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum RewriteStyle {
+    #[default]
+    Clean,
+    Concise,
+    Formal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields, rename_all = "camelCase")]
+pub struct LlmConfig {
+    pub enabled: bool,
+    pub provider: LlmProviderKind,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    pub mode: LlmMode,
+    pub style: RewriteStyle,
+    pub timeout_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_prompt: Option<String>,
+}
+
+impl Default for LlmConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            provider: LlmProviderKind::Openai,
+            endpoint: None,
+            api_key: None,
+            model: None,
+            mode: LlmMode::Smart,
+            style: RewriteStyle::Clean,
+            timeout_ms: 10_000,
+            custom_prompt: None,
+        }
+    }
+}
+
+impl LlmConfig {
+    pub fn endpoint(&self) -> &str {
+        non_empty(self.endpoint.as_deref()).unwrap_or_else(|| self.provider.default_endpoint())
+    }
+
+    pub fn model(&self) -> &str {
+        non_empty(self.model.as_deref()).unwrap_or_else(|| self.provider.default_model())
+    }
+
+    pub fn api_key(&self) -> Option<&str> {
+        non_empty(self.api_key.as_deref())
+    }
+
+    pub fn custom_prompt(&self) -> Option<&str> {
+        non_empty(self.custom_prompt.as_deref())
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        if !self.enabled {
+            return Ok(());
+        }
+        let endpoint =
+            reqwest::Url::parse(self.endpoint()).context("llm.endpoint 必须是有效的 URL")?;
+        if !matches!(endpoint.scheme(), "http" | "https") {
+            bail!("llm.endpoint 必须使用 http 或 https");
+        }
+        if self.model().is_empty() {
+            bail!("llm.model 不能为空");
+        }
+        if self.api_key().is_none() {
+            bail!("{} 需要 llm.apiKey", self.provider.as_str());
+        }
+        if !(3_000..=30_000).contains(&self.timeout_ms) {
+            bail!("llm.timeoutMs 必须在 3000 到 30000 之间");
+        }
+        Ok(())
+    }
+}
+
 impl AsrProviderKind {
     pub const ALL: [Self; 13] = [
         Self::Doubao,
@@ -319,6 +504,8 @@ pub struct Config {
     pub input_device: Option<String>,
     pub max_recording_seconds: u64,
     pub asr: AsrConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub llm: Option<LlmConfig>,
 }
 
 impl Default for Config {
@@ -329,6 +516,7 @@ impl Default for Config {
             input_device: None,
             max_recording_seconds: 600,
             asr: AsrConfig::default(),
+            llm: None,
         }
     }
 }
@@ -418,6 +606,9 @@ impl Config {
             bail!("maxRecordingSeconds 必须在 1 到 600 之间");
         }
         self.asr.validate()?;
+        if let Some(llm) = &self.llm {
+            llm.validate()?;
+        }
         Ok(())
     }
 
@@ -482,6 +673,7 @@ mod tests {
         assert_eq!(config.max_recording_seconds, 600);
         assert_eq!(config.asr.provider, AsrProviderKind::Doubao);
         assert_eq!(config.asr.endpoint, None);
+        assert_eq!(config.llm, None);
     }
 
     #[test]
@@ -521,6 +713,7 @@ mod tests {
 
         assert_eq!(config.asr, AsrConfig::default());
         assert_eq!(config.asr.provider.as_str(), "doubao");
+        assert_eq!(config.llm, None);
         assert!(config.validate().is_ok());
     }
 
@@ -548,6 +741,44 @@ mod tests {
         assert_eq!(value["asr"]["provider"], "doubao");
         assert!(value["asr"].get("apiKey").is_none());
         assert!(value["asr"].get("endpoint").is_none());
+        assert!(value.get("llm").is_none());
+    }
+
+    #[test]
+    fn every_llm_provider_has_a_minimal_cloud_configuration() {
+        for provider in LlmProviderKind::ALL {
+            let llm = LlmConfig {
+                provider,
+                api_key: Some("api-key".to_string()),
+                ..LlmConfig::default()
+            };
+            assert!(llm.validate().is_ok(), "{}", provider.as_str());
+            assert!(!llm.endpoint().is_empty(), "{}", provider.as_str());
+            assert!(!llm.model().is_empty(), "{}", provider.as_str());
+            assert_eq!(LlmProviderKind::parse(provider.as_str()), Some(provider));
+        }
+    }
+
+    #[test]
+    fn disabled_llm_does_not_require_credentials() {
+        let llm = LlmConfig {
+            enabled: false,
+            ..LlmConfig::default()
+        };
+        assert!(llm.validate().is_ok());
+    }
+
+    #[test]
+    fn llm_timeout_and_endpoint_are_bounded() {
+        let mut llm = LlmConfig {
+            api_key: Some("key".to_string()),
+            timeout_ms: 2_999,
+            ..LlmConfig::default()
+        };
+        assert!(llm.validate().is_err());
+        llm.timeout_ms = 10_000;
+        llm.endpoint = Some("file:///tmp/llm".to_string());
+        assert!(llm.validate().is_err());
     }
 
     #[test]
@@ -559,6 +790,19 @@ mod tests {
         assert_eq!(config.asr.endpoint, None);
         assert_eq!(config.asr.api_key, None);
         assert_eq!(config.asr.resource_id, None);
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn packaged_llm_example_is_a_valid_minimal_configuration() {
+        let config: Config =
+            serde_json::from_str(include_str!("../data/config.llm.example.json")).unwrap();
+
+        let llm = config.llm.as_ref().unwrap();
+        assert_eq!(llm.provider, LlmProviderKind::Deepseek);
+        assert_eq!(llm.api_key(), Some("replace-me"));
+        assert!(llm.endpoint.is_none());
+        assert!(llm.model.is_none());
         assert!(config.validate().is_ok());
     }
 

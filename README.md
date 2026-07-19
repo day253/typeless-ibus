@@ -17,7 +17,7 @@ already using.
 - **Hold to talk**: hold `Fn` to record and release it to stop, with toggle mode and alternative keys available.
 - **Built for Wayland**: text input uses IBus D-Bus interfaces instead of keyboard or paste simulation.
 - **System-native controls**: change the trigger key and recording mode from the IBus input-source menu, with English and Chinese labels selected from the system locale.
-- **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit, Python runtime, or LLM.
+- **Small Rust codebase**: the engine is written in Rust, with no GUI toolkit or Python runtime.
 - **Zero-config speech recognition**: Doubao is the default provider and automatically obtains its
   own credentials; no account or API key is required. JSON configuration can instead select
   OpenAI, Groq, OpenRouter, SiliconFlow, Zhipu, ElevenLabs, Xiaomi MiMo, Alibaba Cloud Model
@@ -27,8 +27,10 @@ already using.
   and openSUSE Tumbleweed; Arch Linux is protocol-tested; Nix covers both Linux architectures.
 - **Automatic recovery**: rejected Doubao service-discovery credentials are refreshed while the
   current audio is replayed.
-- **Local recognition logs**: daily structured logs retain final transcripts and available IBus app
-  context without saving recorded audio.
+- **Optional LLM cleanup**: safely polish only the final transcript through OpenAI-compatible or
+  Anthropic APIs, skip structured and sensitive fields, and fall back to the ASR text on any error.
+- **Local recognition logs**: daily structured logs retain final transcripts, the original ASR text
+  processed by an enabled LLM, and available IBus app context without saving recorded audio.
 
 ## How it feels
 
@@ -44,9 +46,10 @@ Press `Esc` to cancel the active recording or recognition session.
 
 The current release targets Linux distributions with IBus 1.5.22 or newer. IBus remains the only
 input-method backend; integrations supplied by each distribution connect it to GTK, Qt, XIM, and
-Wayland applications. The project does not ship separate frontends or Fcitx5 support. It also does
-not include Windows or macOS clients, LLM rewriting, accounts, cloud quotas, cloud history sync, or
-dictionary features. See the [logging guide](docs/logging.md) for local retention and privacy details.
+Wayland applications. The project does not ship separate frontends or Fcitx5 support. It does not
+include Windows or macOS clients, selected-text rewriting, accounts, cloud quotas, cloud history
+sync, or dictionary features. LLM cleanup is opt-in and disabled when `llm` is absent; see the
+[LLM provider guide](docs/llm/README.md) and [logging guide](docs/logging.md).
 
 ## Documentation
 

@@ -1,7 +1,8 @@
 use crate::asr::{self, AsrEvent};
 use crate::audio::AudioCaptureHandle;
-use crate::config::{AsrConfig, ConfigStore, TriggerMode};
+use crate::config::{AsrConfig, ConfigStore, LlmConfig, TriggerMode};
 use crate::i18n;
+use crate::llm::{self, RewriteReport, RewriteRequest};
 use crate::properties::{self, ConfigAction};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -76,6 +77,13 @@ struct RecognitionLogContext {
     content_type: (u32, u32),
 }
 
+#[derive(Debug, Clone)]
+struct RecognitionSettings {
+    asr: AsrConfig,
+    llm: Option<LlmConfig>,
+    credentials_path: PathBuf,
+}
+
 impl RecognitionLogContext {
     fn new(
         engine_path: &str,
@@ -119,8 +127,48 @@ impl RecognitionLogContext {
         );
     }
 
-    fn log_finished(&self, status: &str, transcript: Option<&str>, error: Option<&str>) {
-        let transcript = transcript.unwrap_or_default();
+    fn log_finished(
+        &self,
+        status: &str,
+        transcript: Option<&str>,
+        error: Option<&str>,
+        llm: Option<&RewriteReport>,
+    ) {
+        let transcript_redacted = transcript.is_some() && matches!(self.content_type.0, 8 | 9);
+        let transcript = if transcript_redacted {
+            ""
+        } else {
+            transcript.unwrap_or_default()
+        };
+        let llm_provider = llm
+            .and_then(|report| report.provider.as_deref())
+            .unwrap_or("none");
+        let llm_model = llm
+            .and_then(|report| report.model.as_deref())
+            .unwrap_or("none");
+        let llm_status = llm.map(|report| report.status).unwrap_or("not_run");
+        let llm_duration_ms = llm.map(|report| report.duration_ms).unwrap_or(0);
+        let llm_request_id = llm
+            .and_then(|report| report.request_id.as_deref())
+            .unwrap_or("");
+        let llm_changed = llm.is_some_and(|report| report.changed);
+        let llm_input_characters = llm.map(|report| report.input_characters).unwrap_or(0);
+        let llm_output_characters = llm.map(|report| report.output_characters).unwrap_or(0);
+        let llm_input_tokens = llm.and_then(|report| report.input_tokens).unwrap_or(0);
+        let llm_output_tokens = llm.and_then(|report| report.output_tokens).unwrap_or(0);
+        let llm_fallback_reason = llm
+            .and_then(|report| report.fallback_reason.as_deref())
+            .unwrap_or("");
+        let llm_original_transcript_redacted = llm
+            .and_then(|report| report.original_transcript.as_deref())
+            .is_some()
+            && matches!(self.content_type.0, 8 | 9);
+        let llm_original_transcript = if llm_original_transcript_redacted {
+            ""
+        } else {
+            llm.and_then(|report| report.original_transcript.as_deref())
+                .unwrap_or("")
+        };
         tracing::info!(
             schema_version = 1,
             event = "voice_session.finished",
@@ -142,6 +190,20 @@ impl RecognitionLogContext {
             client_capabilities = self.ibus.capabilities,
             transcript,
             transcript_characters = transcript.chars().count(),
+            transcript_redacted,
+            llm_provider,
+            llm_model,
+            llm_status,
+            llm_duration_ms,
+            llm_request_id,
+            llm_changed,
+            llm_input_characters,
+            llm_output_characters,
+            llm_input_tokens,
+            llm_output_tokens,
+            llm_fallback_reason,
+            llm_original_transcript,
+            llm_original_transcript_redacted,
             error = error.unwrap_or_default(),
             "voice session finished"
         );
@@ -247,8 +309,11 @@ impl VoiceEngine {
 
         let owned_emitter = emitter.to_owned();
         let session = self.session.clone();
-        let credentials_path = self.credentials_path.clone();
-        let asr_config = config.asr.clone();
+        let recognition_settings = RecognitionSettings {
+            asr: config.asr.clone(),
+            llm: config.llm.clone(),
+            credentials_path: self.credentials_path.clone(),
+        };
         let recognition_span = tracing::info_span!(
             "voice_session",
             session_id = %log_context.session_id,
@@ -259,8 +324,7 @@ impl VoiceEngine {
                 session.clone(),
                 generation,
                 audio_rx,
-                asr_config,
-                credentials_path,
+                recognition_settings,
                 owned_emitter.clone(),
                 log_context,
             )
@@ -328,7 +392,7 @@ impl VoiceEngine {
     async fn cancel(&self, emitter: &SignalEmitter<'_>, show_message: bool) {
         let canceled = cancel_session(&self.session);
         if let Some(log_context) = canceled {
-            log_context.log_finished("canceled", None, None);
+            log_context.log_finished("canceled", None, None, None);
             hide_preedit(emitter).await;
             if show_message {
                 let _ = Self::update_auxiliary_text(
@@ -586,15 +650,19 @@ async fn run_recognition(
     session: Arc<Mutex<SessionState>>,
     generation: u64,
     audio_rx: mpsc::Receiver<Vec<u8>>,
-    asr_config: AsrConfig,
-    credentials_path: PathBuf,
+    settings: RecognitionSettings,
     emitter: SignalEmitter<'static>,
     log_context: RecognitionLogContext,
 ) {
     let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-    let recognition = asr::transcribe(&asr_config, audio_rx, &credentials_path, move |event| {
-        let _ = event_tx.send(event);
-    });
+    let recognition = asr::transcribe(
+        &settings.asr,
+        audio_rx,
+        &settings.credentials_path,
+        move |event| {
+            let _ = event_tx.send(event);
+        },
+    );
     tokio::pin!(recognition);
     let mut latest_text = String::new();
 
@@ -618,12 +686,12 @@ async fn run_recognition(
         }
     };
 
-    if !finish_session(&session, generation) {
+    if !is_current(&session, generation) {
         return;
     }
-    let commit_text = preferred_transcript(&result, &latest_text);
+    let raw_text = preferred_transcript(&result, &latest_text);
     if let Err(error) = &result
-        && let Some(text) = &commit_text
+        && let Some(text) = &raw_text
     {
         tracing::warn!(
             error = %format_args!("{error:#}"),
@@ -631,11 +699,33 @@ async fn run_recognition(
             "recognition ended with an error; committing the latest visible transcript"
         );
     }
-    hide_preedit(&emitter).await;
-    if let Some(text) = commit_text {
+    if let Some(raw_text) = raw_text {
+        update_preedit(&emitter, &raw_text).await;
+        let preferences = crate::system_preferences::SystemPreferences::current();
+        let outcome = llm::rewrite_if_configured(
+            settings.llm.as_ref(),
+            RewriteRequest {
+                transcript: raw_text,
+                language: preferences.speech_language().to_string(),
+                input_purpose: log_context.content_type.0,
+                ibus_client: log_context.ibus.client.clone(),
+            },
+        )
+        .await;
+        if !finish_session(&session, generation) {
+            return;
+        }
+        hide_preedit(&emitter).await;
+        let text = outcome.text;
+        let rewrite_report = outcome.report;
         if let Err(error) = VoiceEngine::commit_text(&emitter, ibus_text(text.clone())).await {
             tracing::error!(%error, "failed to commit recognized text");
-            log_context.log_finished("commit_failed", Some(&text), Some(&error.to_string()));
+            log_context.log_finished(
+                "commit_failed",
+                Some(&text),
+                Some(&error.to_string()),
+                Some(&rewrite_report),
+            );
             show_error(
                 &emitter,
                 format!(
@@ -652,15 +742,19 @@ async fn run_recognition(
                 characters = text.chars().count(),
                 "committed recognized text"
             );
-            log_context.log_finished("committed", Some(&text), None);
+            log_context.log_finished("committed", Some(&text), None, Some(&rewrite_report));
             let _ =
                 VoiceEngine::update_auxiliary_text(&emitter, ibus_text(String::new()), false).await;
         }
         return;
     }
+    if !finish_session(&session, generation) {
+        return;
+    }
+    hide_preedit(&emitter).await;
     match result {
         Ok(_) => {
-            log_context.log_finished("no_speech", None, None);
+            log_context.log_finished("no_speech", None, None, None);
             show_error(
                 &emitter,
                 i18n::text("No speech was recognized", "没有识别到语音").to_string(),
@@ -669,7 +763,12 @@ async fn run_recognition(
         }
         Err(error) => {
             tracing::error!(error = %format_args!("{error:#}"), "speech recognition failed");
-            log_context.log_finished("recognition_failed", None, Some(&format!("{error:#}")));
+            log_context.log_finished(
+                "recognition_failed",
+                None,
+                Some(&format!("{error:#}")),
+                None,
+            );
             show_error(
                 &emitter,
                 format!(
