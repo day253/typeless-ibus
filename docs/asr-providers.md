@@ -52,7 +52,7 @@ OpenLess 另外包含平台或本地实现：macOS 的 Qwen3-ASR 和 Apple Speec
 OpenLess 的关键设计参考价值是：录音端统一输出 PCM，供应商在边界之后自行选择流式或
 批量、音频编码、认证和生命周期。typeless-ibus 采用相同方向，使用较小的
 `AsrProvider` trait，不依赖其 Tauri、平台 UI 或本地模型栈。协议实现的许可归属见
-[第三方说明](../THIRD_PARTY.md)。
+[第三方说明](THIRD_PARTY.md)。
 
 ## 扩展约束
 

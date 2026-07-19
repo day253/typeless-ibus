@@ -48,7 +48,7 @@ sed 's|/usr/libexec/typeless-ibus-engine|%{_libexecdir}/typeless-ibus-engine|' \
 
 %files
 %license LICENSE
-%doc README.md README_zh.md CHANGELOG.md THIRD_PARTY.md data/config.example.json
+%doc README.md README_zh.md CHANGELOG.md docs/THIRD_PARTY.md data/config.example.json
 %{_libexecdir}/typeless-ibus-engine
 %{_datadir}/ibus/component/typeless.xml
 

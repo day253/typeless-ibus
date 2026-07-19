@@ -52,5 +52,5 @@ assets = [
   ["README.md", "usr/share/doc/typeless-ibus/README.md", "644"],
   ["README_zh.md", "usr/share/doc/typeless-ibus/README_zh.md", "644"],
   ["CHANGELOG.md", "usr/share/doc/typeless-ibus/CHANGELOG.md", "644"],
-  ["THIRD_PARTY.md", "usr/share/doc/typeless-ibus/THIRD_PARTY.md", "644"],
+  ["docs/THIRD_PARTY.md", "usr/share/doc/typeless-ibus/THIRD_PARTY.md", "644"],
 ]
