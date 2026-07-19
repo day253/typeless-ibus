@@ -1,6 +1,6 @@
 # 语种选择与回退
 
-[文档首页](README.md) · [使用与配置](usage.md) · [ASR 供应商](asr/README.md)
+[文档首页](index.md) · [使用与配置](usage.md) · [ASR 供应商](asr/README.md)
 
 typeless-ibus 不要求用户为了日常使用在 JSON 中固定 `language`。引擎把“用户偏好”和
 “provider 协议能力”分开处理：先从系统推断语音语言，再只向明确支持语言提示的协议发送。
@@ -71,4 +71,4 @@ Qwen3 ASR Realtime 自动提示仅允许以下当前官方语言代码：`zh`、
 运行 `typeless-ibus-engine --check-asr` 可以看到最终使用的是配置值、系统推断值，还是
 provider 自动识别。
 
-[返回文档索引](README.md)
+[返回文档索引](index.md)

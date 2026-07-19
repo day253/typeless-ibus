@@ -139,6 +139,7 @@ footer a:hover {
 }
 
 .language-toggle,
+.docs-link,
 .github-link {
   min-height: 40px;
   border-radius: 13px;
@@ -165,6 +166,17 @@ footer a:hover {
   padding: 0 16px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.55);
+}
+
+.docs-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  color: var(--muted);
+}
+
+.docs-link:hover {
+  color: var(--purple);
 }
 
 .github-dot {

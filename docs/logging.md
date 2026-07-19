@@ -1,6 +1,6 @@
 # 本地日志
 
-[文档首页](README.md) · [数据与隐私](privacy.md) · [故障排查](troubleshooting.md)
+[文档首页](index.md) · [数据与隐私](privacy.md) · [故障排查](troubleshooting.md)
 
 typeless-ibus 默认把结构化日志写到当前用户的 XDG state 目录：
 
@@ -104,4 +104,4 @@ jq -c 'select(.session_id == "SESSION_UUID" or .span.session_id == "SESSION_UUID
 
 删除日志不会影响配置或 ASR 凭据；引擎下次写入时会自动创建新的日志文件。
 
-[返回文档索引](README.md)
+[返回文档索引](index.md)

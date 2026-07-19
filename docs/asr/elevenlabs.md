@@ -1,6 +1,6 @@
 # ElevenLabs ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · ElevenLabs
+[文档首页](../index.md) · [ASR 供应商](README.md) · ElevenLabs
 
 ElevenLabs 预设的 `provider` 为 `elevenlabs`，使用 Speech-to-Text multipart 接口，默认
 模型是 `scribe_v2`。

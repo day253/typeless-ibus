@@ -50,7 +50,7 @@ dictionary features. See the [logging guide](docs/logging.md) for local retentio
 
 ## Documentation
 
-Detailed documentation is maintained in Chinese. Start with the [documentation index](docs/README.md)
+Detailed documentation is maintained in Chinese. Start with the [documentation site](https://day253.github.io/typeless-ibus/docs/)
 for installation, usage, provider configuration, troubleshooting, architecture, and development.
 Release changes are recorded in the [changelog](CHANGELOG.md).
 

@@ -1,6 +1,6 @@
 # SiliconFlow（硅基流动）ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · SiliconFlow
+[文档首页](../index.md) · [ASR 供应商](README.md) · SiliconFlow
 
 SiliconFlow 预设的 `provider` 为 `siliconflow`，使用 Audio Transcriptions multipart
 接口。中国站默认 endpoint 是 `https://api.siliconflow.cn/v1/audio/transcriptions`，默认

@@ -1,6 +1,6 @@
 # Groq ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · Groq
+[文档首页](../index.md) · [ASR 供应商](README.md) · Groq
 
 Groq 预设的 `provider` 为 `groq`，使用兼容 OpenAI Audio Transcriptions 的 multipart
 接口。默认模型是 `whisper-large-v3-turbo`。

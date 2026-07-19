@@ -1,6 +1,6 @@
 # 安装与卸载
 
-[文档首页](README.md) · [发行版支持](distributions.md) · [使用与配置](usage.md)
+[文档首页](index.md) · [发行版支持](distributions.md) · [使用与配置](usage.md)
 
 ## 系统要求
 
@@ -143,4 +143,4 @@ cargo build --release --locked
 - 系统包：`/usr/libexec/typeless-ibus-engine`
 - 用户级安装：`~/.local/libexec/typeless-ibus-engine`
 
-[返回文档索引](README.md)
+[返回文档索引](index.md)

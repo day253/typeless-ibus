@@ -1,6 +1,6 @@
 # 数据、隐私与风险
 
-[文档首页](README.md) · [默认 provider](asr/doubao.md)
+[文档首页](index.md) · [默认 provider](asr/doubao.md)
 
 ## 数据流
 
@@ -43,4 +43,4 @@
 默认协议的具体实现来源和代码边界见[豆包零配置 ASR](asr/doubao.md)，完整许可归属见
 [第三方说明](THIRD_PARTY.md)。
 
-[返回文档索引](README.md)
+[返回文档索引](index.md)

@@ -1,6 +1,6 @@
 # 智谱 AI ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · 智谱 AI
+[文档首页](../index.md) · [ASR 供应商](README.md) · 智谱 AI
 
 智谱预设的 `provider` 为 `zhipu`，默认模型是 `glm-asr-2512`，通过 multipart HTTP
 上传 WAV。由于官方接口限制，typeless-ibus 会把长录音按 30 秒切片再合并结果。

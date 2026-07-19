@@ -1,6 +1,6 @@
 # OpenAI-compatible 云端 ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · OpenAI-compatible
+[文档首页](../index.md) · [ASR 供应商](README.md) · OpenAI-compatible
 
 `openai-compatible` 用于没有专用预设、但实现 OpenAI Audio Transcriptions multipart
 协议的云端服务。目标接口必须接收 `file`、`model`，并返回至少包含

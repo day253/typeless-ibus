@@ -1,6 +1,6 @@
 # 小米 MiMo ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · 小米 MiMo
+[文档首页](../index.md) · [ASR 供应商](README.md) · 小米 MiMo
 
 小米 MiMo 预设的 `provider` 为 `xiaomi-mimo-asr`，使用 MiMo-V2.5-ASR 的
 `chat/completions` 音频 JSON 协议。默认模型是 `mimo-v2.5-asr`。

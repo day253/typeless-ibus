@@ -1,6 +1,6 @@
 # 故障排查
 
-[文档首页](README.md) · [使用与配置](usage.md) · [ASR 供应商](asr/README.md)
+[文档首页](index.md) · [使用与配置](usage.md) · [ASR 供应商](asr/README.md)
 
 以下命令中的系统安装路径是 `/usr/libexec/typeless-ibus-engine`。用户级安装时，请替换为
 `~/.local/libexec/typeless-ibus-engine`。
@@ -75,4 +75,4 @@ tail -f ~/.local/state/typeless-ibus/logs/typeless-ibus.latest.jsonl
 第二次失败不会无限重试。`40200011`/`concurrency quota exceeded` 也会等待 2 秒后用当前
 凭据重试一次，但不会刷新本地凭据；这两类错误都不会无限重试。
 
-[返回文档索引](README.md)
+[返回文档索引](index.md)

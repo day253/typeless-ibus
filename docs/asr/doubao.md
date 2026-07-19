@@ -1,6 +1,6 @@
 # 豆包零配置 ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · 默认 provider
+[文档首页](../index.md) · [ASR 供应商](README.md) · 默认 provider
 
 豆包是 typeless-ibus 的默认供应商，`provider` 为 `doubao`。它不要求注册账号，也没有需要
 用户获取的 API Key、endpoint 或 model。

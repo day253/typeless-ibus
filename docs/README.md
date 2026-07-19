@@ -3,8 +3,9 @@
 这里保存产品主页之外的安装、配置、排障、实现和维护资料。按当前任务选择入口即可，
 不需要从头顺序阅读。
 
-[English product overview](../README.md) · [中文产品介绍](../README_zh.md) ·
-[更新日志](../CHANGELOG.md)
+[English product overview](https://day253.github.io/typeless-ibus/) ·
+[中文产品介绍](https://github.com/day253/typeless-ibus/blob/main/README_zh.md) ·
+[更新日志](https://github.com/day253/typeless-ibus/blob/main/CHANGELOG.md)
 
 ## 开始使用
 
@@ -28,6 +29,6 @@
 - [架构与设计](architecture.md)：IBus、音频、输入会话、ASR 和故障恢复流程。
 - [ASR 供应商设计](asr-providers.md)：协议适配器、实现边界与扩展约束。
 - [开发与验证](development.md)：本地检查、打包、发行版矩阵和 GitHub Actions。
-- [更新日志](../CHANGELOG.md)：每个版本的功能和兼容性变化。
+- [更新日志](https://github.com/day253/typeless-ibus/blob/main/CHANGELOG.md)：每个版本的功能和兼容性变化。
 
-[返回中文产品介绍](../README_zh.md)
+[返回中文产品介绍](https://github.com/day253/typeless-ibus/blob/main/README_zh.md)

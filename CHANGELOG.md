@@ -34,6 +34,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   other supported fields through runtime defaults; the unused `vocabularyId` field was removed.
 - Documentation is now organized by user task, and the default protocol implementation reference
   lives with the `doubao` provider documentation instead of the product overview.
+- The GitHub Pages product site now builds the Markdown documentation into a searchable `/docs/`
+  subsite automatically with Zensical.
 - Speech language defaults now follow the system locale and time zone, prefer Chinese for an
   English-default system in a China time zone, and omit hints for providers that cannot accept them.
 - Credential recovery after a Doubao service-discovery failure now waits two seconds before

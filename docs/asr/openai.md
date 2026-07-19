@@ -1,6 +1,6 @@
 # OpenAI ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · OpenAI
+[文档首页](../index.md) · [ASR 供应商](README.md) · OpenAI
 
 OpenAI 预设的 `provider` 为 `whisper`。名称是为兼容项目早期配置保留的；`model` 不限于
 `whisper-1`，也可以显式改成 OpenAI Audio Transcriptions 接口当前支持的其他转写模型。

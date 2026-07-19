@@ -32,4 +32,15 @@ if grep -R '@TYPELESS_VERSION@' "$output_dir" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Built typeless-ibus website version $version in $output_dir"
+if ! command -v zensical >/dev/null 2>&1; then
+  echo "The documentation builder is missing: install requirements-docs.txt first." >&2
+  exit 1
+fi
+
+(
+  cd "$project_dir"
+  zensical build --clean --strict
+)
+
+test -f "$output_dir/docs/index.html"
+echo "Built typeless-ibus website version $version and documentation in $output_dir"

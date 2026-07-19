@@ -1,6 +1,6 @@
 # 阿里云百炼 ASR
 
-[文档首页](../README.md) · [ASR 供应商](README.md) · 阿里云百炼
+[文档首页](../index.md) · [ASR 供应商](README.md) · 阿里云百炼
 
 同一个阿里云百炼 API Key 可以配置 typeless-ibus 的三种协议。它们的延迟、模型与可选字段
 不同，请只选择一个 `provider`：

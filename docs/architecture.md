@@ -1,6 +1,6 @@
 # 架构与设计
 
-[文档首页](README.md) · [ASR 供应商设计](asr-providers.md) · [开发与验证](development.md)
+[文档首页](index.md) · [ASR 供应商设计](asr-providers.md) · [开发与验证](development.md)
 
 typeless-ibus 是 Linux 原生 IBus 组件。按键事件、预编辑文本和最终提交全部通过 IBus
 接口完成，不依赖剪贴板、模拟粘贴或 X11。
@@ -88,4 +88,4 @@ IBus 引擎只依赖统一的 `AsrProvider` trait：输入是 16 kHz 单声道 s
 `request_id` 也会被识别。握手、传输或识别失败时，请求 ID 随错误写入日志，同时不会
 记录任何密钥或音频。
 
-[返回文档索引](README.md)
+[返回文档索引](index.md)

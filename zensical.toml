@@ -1,0 +1,76 @@
+[project]
+site_name = "typeless-ibus 文档"
+site_url = "https://day253.github.io/typeless-ibus/docs/"
+site_description = "typeless-ibus 的安装、配置、ASR 供应商、排障与开发文档。"
+site_author = "day253"
+docs_dir = "docs"
+site_dir = "target/pages/docs"
+repo_url = "https://github.com/day253/typeless-ibus"
+repo_name = "day253/typeless-ibus"
+edit_uri = "edit/main/docs/"
+copyright = "为 Linux 做的一件小事 · Rust + IBus · MIT License"
+nav = [
+  { "开始使用" = [
+    "index.md",
+    "distributions.md",
+    "installation.md",
+    "usage.md",
+    "languages.md",
+  ]},
+  { "ASR 供应商" = [
+    "asr/README.md",
+    "asr/doubao.md",
+    "asr/openai-compatible.md",
+    "asr/openai.md",
+    "asr/groq.md",
+    "asr/openrouter.md",
+    "asr/siliconflow.md",
+    "asr/zhipu.md",
+    "asr/elevenlabs.md",
+    "asr/xiaomi-mimo.md",
+    "asr/alibaba-bailian.md",
+    "asr/volcengine.md",
+  ]},
+  { "排障与数据" = [
+    "troubleshooting.md",
+    "logging.md",
+    "privacy.md",
+  ]},
+  { "设计与开发" = [
+    "architecture.md",
+    "asr-providers.md",
+    "development.md",
+    "THIRD_PARTY.md",
+  ]},
+  { "更新日志" = "https://github.com/day253/typeless-ibus/blob/main/CHANGELOG.md" },
+]
+
+[project.theme]
+language = "zh"
+variant = "modern"
+features = [
+  "navigation.tabs",
+  "navigation.sections",
+  "navigation.expand",
+  "navigation.path",
+  "navigation.top",
+  "search.highlight",
+  "content.action.edit",
+  "content.action.view",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "deep purple"
+accent = "pink"
+toggle.icon = "material/brightness-7"
+toggle.name = "切换到深色模式"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "deep purple"
+accent = "pink"
+toggle.icon = "material/brightness-4"
+toggle.name = "切换到浅色模式"
